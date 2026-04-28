@@ -1,79 +1,28 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>MEMS Weather Center</title>
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-
 <style>
-body {
-  margin: 0;
-  background: #0a0a0a;
-  color: white;
-  font-family: Arial, sans-serif;
-}
-
-header {
-  background: black;
-  padding: 14px 20px;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: 2px;
-}
-
-.top-bar {
-  display: flex;
-}
-
-.zone {
-  flex: 1;
-  text-align: center;
-  padding: 10px;
-  font-weight: 700;
-}
-
+body { margin: 0; background: #0a0a0a; color: white; font-family: Arial, sans-serif; }
+header { background: black; padding: 14px 20px; font-size: 26px; font-weight: 900; letter-spacing: 2px; }
+.top-bar { display: flex; }
+.zone { flex: 1; text-align: center; padding: 10px; font-weight: 700; }
 .zone.normal { background: #2e7d32; }
 .zone.watch { background: #f47b26; }
 .zone.warning { background: #b42318; }
-
-.layout {
-  display: grid;
-  grid-template-columns: 70% 30%;
-  height: calc(100vh - 110px);
-}
-
-#map {
-  height: 100%;
-}
-
-.panel {
-  background: #111;
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.alert-box {
-  padding: 14px;
-  margin-bottom: 12px;
-  border-radius: 6px;
-}
-
+.layout { display: grid; grid-template-columns: 70% 30%; height: calc(100vh - 110px); }
+#map { height: 100%; }
+.panel { background: #111; padding: 16px; overflow-y: auto; }
+.alert-box { padding: 14px; margin-bottom: 12px; border-radius: 6px; }
 .alert-box.watch { background: #c2410c; }
 .alert-box.warning { background: #b42318; }
-
-.alert-title {
-  font-weight: 900;
-  margin-bottom: 6px;
-}
-
-.station-hit {
-  margin-top: 8px;
-  font-weight: 700;
-}
+.alert-title { font-weight: 900; margin-bottom: 6px; }
+.station-hit { margin-top: 8px; font-weight: 700; }
 </style>
 </head>
-
 <body>
 
 <header>MEMS WEATHER CENTER</header>
@@ -96,100 +45,116 @@ header {
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-
 <script>
 const map = L.map("map").setView([34.75, -92.25], 7);
-
 L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png").addTo(map);
 
 const stations = [
-  { name: "Cabot", lat: 34.97, lng: -92.01 },
-  { name: "Sheridan", lat: 34.31, lng: -92.39 },
-  { name: "Maumelle", lat: 34.85, lng: -92.40 },
-  { name: "Sherwood", lat: 34.83, lng: -92.20 },
-  { name: "Little Rock", lat: 34.74, lng: -92.28 }
+  { name: "Cabot",        lat: 34.97, lng: -92.01 },
+  { name: "Sheridan",     lat: 34.31, lng: -92.39 },
+  { name: "Maumelle",     lat: 34.85, lng: -92.40 },
+  { name: "Sherwood",     lat: 34.83, lng: -92.20 },
+  { name: "Little Rock",  lat: 34.74, lng: -92.28 }
 ];
 
 const stationLayer = L.layerGroup().addTo(map);
-const watchLayer = L.geoJSON(null, {style:{color:"#f47b26",fillOpacity:.2}}).addTo(map);
-const warningLayer = L.geoJSON(null, {style:{color:"#ff0000",fillOpacity:.35}}).addTo(map);
+const warningLayer = L.geoJSON(null, { style: { color: "#ff0000", fillOpacity: .35 } }).addTo(map);
 
-stations.forEach(s=>{
-  L.circleMarker([s.lat,s.lng],{radius:6,color:"#fff",fillColor:"#005bea",fillOpacity:1})
-  .bindPopup(s.name).addTo(stationLayer);
+stations.forEach(s => {
+  L.circleMarker([s.lat, s.lng], { radius: 6, color: "#fff", fillColor: "#005bea", fillOpacity: 1 })
+    .bindPopup(s.name).addTo(stationLayer);
 });
 
-async function loadAlerts(){
-  const container=document.getElementById("alerts");
+// Format county list into readable comma-separated string
+function formatAreas(areaDesc) {
+  return areaDesc
+    ? areaDesc.split(";").map(s => s.trim()).filter(Boolean).join(", ")
+    : "";
+}
 
-  container.innerHTML="";
-  watchLayer.clearLayers();
+function resetZones() {
+  document.querySelectorAll(".zone").forEach(z => {
+    z.className = "zone normal";
+  });
+}
+
+function updateZones(impacted, event) {
+  const zones = document.querySelectorAll(".zone");
+  const indexMap = {
+    "Little Rock": 0,
+    "Maumelle":    2,
+    "Sherwood":    3,
+    "Cabot":       4,
+    "Sheridan":    6
+  };
+  impacted.forEach(s => {
+    const idx = indexMap[s.name];
+    if (idx === undefined) return;
+    zones[idx].classList.remove("normal");
+    zones[idx].classList.add(event === "Tornado Warning" ? "warning" : "watch");
+  });
+}
+
+async function loadAlerts() {
+  const container = document.getElementById("alerts");
+  container.innerHTML = "";
   warningLayer.clearLayers();
   resetZones();
 
-  try{
-    const res=await fetch("https://api.weather.gov/alerts/active",{
-      headers:{"Accept":"application/geo+json"}
+  try {
+    const res = await fetch("https://api.weather.gov/alerts/active", {
+      headers: { "Accept": "application/geo+json" }
     });
+    const data = await res.json();
 
-    const data=await res.json();
-
-    const alerts=data.features.filter(a=>{
-      const event=a.properties.event;
+    const alerts = data.features.filter(a => {
+      const event = a.properties.event;
       return (
-        event==="Tornado Warning" ||
-        event==="Tornado Watch" ||
-        event==="Severe Thunderstorm Watch"
+        event === "Tornado Warning" ||
+        event === "Tornado Watch" ||
+        event === "Severe Thunderstorm Watch"
       );
     });
 
-    alerts.forEach(alert=>{
-      const p=alert.properties;
-      const event=p.event;
-      const areaDesc=p.areaDesc || "";
+    if (alerts.length === 0) {
+      container.innerHTML = `<div class="alert-box" style="background:#1e3a1e">No active alerts for this area.</div>`;
+    }
 
-      // ONLY draw tornado warning polygons
-      if(event==="Tornado Warning" && alert.geometry){
+    alerts.forEach(alert => {
+      const p = alert.properties;
+      const event = p.event;
+      const areaDesc = p.areaDesc || "";
+      let impacted = [];
+
+      if (event === "Tornado Warning" && alert.geometry) {
         warningLayer.addData(alert);
-      }
-
-      // Only run station impact for tornado warnings with polygons
-      let impacted=[];
-
-      if(event==="Tornado Warning" && alert.geometry){
-        impacted=stations.filter(st=>{
-          const pt=turf.point([st.lng,st.lat]);
-          return turf.booleanPointInPolygon(pt,alert);
+        impacted = stations.filter(st => {
+          const pt = turf.point([st.lng, st.lat]);
+          return turf.booleanPointInPolygon(pt, alert);
         });
-
-        updateZones(impacted,event);
+        updateZones(impacted, event);
       }
 
-      // Watches are listed only, not mapped
-      container.innerHTML+=`
-        <div class="alert-box ${event.includes("Warning")?"warning":"watch"}">
+      container.innerHTML += `
+        <div class="alert-box ${event.includes("Warning") ? "warning" : "watch"}">
           <div class="alert-title">${event}</div>
           <div>${formatAreas(areaDesc)}</div>
-          ${
-            event==="Tornado Warning"
-              ? `<div class="station-hit">
-                   ${impacted.length ? impacted.map(s=>s.name).join(", ") : "No stations impacted"}
-                 </div>`
-              : `<div class="station-hit">Watch listed only — polygon hidden</div>`
-          }
+          <div class="station-hit">
+            ${event === "Tornado Warning"
+              ? (impacted.length ? impacted.map(s => s.name).join(", ") : "No stations impacted")
+              : "Watch listed only — polygon hidden"}
+          </div>
         </div>
       `;
     });
 
-    if(warningLayer.getLayers().length){
-      map.fitBounds(warningLayer.getBounds(),{
-        padding:[25,25]
-      });
+    if (warningLayer.getLayers().length) {
+      map.fitBounds(warningLayer.getBounds(), { padding: [25, 25] });
     }
 
-  }catch(err){
+  } catch (err) {
     console.error(err);
-    container.innerHTML=`
+    container.innerHTML = `
       <div class="alert-box warning">
         <div class="alert-title">API failed</div>
         <div>${err.message}</div>
@@ -198,56 +163,8 @@ async function loadAlerts(){
   }
 }
 
-      updateZones(impacted,event);
-
-      container.innerHTML+=`
-        <div class="alert-box ${event.includes("Warning")?"warning":"watch"}">
-          <div class="alert-title">${event}</div>
-          <div>${p.areaDesc || ""}</div>
-          <div class="station-hit">
-            ${impacted.length?impacted.map(s=>s.name).join(", "):"No stations impacted"}
-          </div>
-        </div>
-      `;
-    });
-
-  }catch(err){
-    console.error(err);
-    container.innerHTML="<div class='alert-box warning'>API failed</div>";
-  }
-}
-
-function resetZones(){
-  document.querySelectorAll(".zone").forEach(z=>{
-    z.className="zone normal";
-  });
-}
-
-function updateZones(stations,event){
-  const zones=document.querySelectorAll(".zone");
-
-  stations.forEach(s=>{
-    let index=0;
-
-    if(s.name==="Little Rock") index=0;
-    if(s.name==="Sherwood") index=3;
-    if(s.name==="Maumelle") index=2;
-    if(s.name==="Cabot") index=4;
-    if(s.name==="Sheridan") index=6;
-
-    zones[index].classList.remove("normal");
-
-    if(event==="Tornado Warning"){
-      zones[index].classList.add("warning");
-    }else{
-      zones[index].classList.add("watch");
-    }
-  });
-}
-
 loadAlerts();
-setInterval(loadAlerts,60000);
+setInterval(loadAlerts, 60000);
 </script>
-
 </body>
 </html>
