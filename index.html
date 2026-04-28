@@ -191,11 +191,17 @@ async function loadAlerts() {
   resetZones();
 
   try {
-    const [alertRes, countyRes] = await Promise.all([
-      fetch("https://api.weather.gov/alerts/active/area/AR"),
-      fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json")
-    ]);
-
+const [alertRes, countyRes] = await Promise.all([
+  fetch("https://api.weather.gov/alerts/active/area/AR", {
+    headers: {
+      "Accept": "application/geo+json"
+    }
+  }),
+  fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json")
+]);
+if (!alertRes.ok) {
+  throw new Error(`NWS API failed: ${alertRes.status}`);
+}
     const alertData = await alertRes.json();
     const countyData = await countyRes.json();
 
