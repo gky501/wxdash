@@ -1,176 +1,726 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>MEMS Weather Center</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
 <style>
-body { margin: 0; background: #0a0a0a; color: white; font-family: Arial, sans-serif; }
-header { background: black; padding: 14px 20px; font-size: 26px; font-weight: 900; letter-spacing: 2px; }
-.top-bar { display: flex; }
-.zone { flex: 1; text-align: center; padding: 10px; font-weight: 700; }
-.zone.normal { background: #2e7d32; }
-.zone.watch { background: #f47b26; }
-.zone.warning { background: #b42318; }
-.layout { display: grid; grid-template-columns: 70% 30%; height: calc(100vh - 110px); }
-#map { height: 100%; }
-.panel { background: #111; padding: 16px; overflow-y: auto; }
-.alert-box { padding: 14px; margin-bottom: 12px; border-radius: 6px; }
-.alert-box.watch { background: #c2410c; }
-.alert-box.warning { background: #b42318; }
-.alert-title { font-weight: 900; margin-bottom: 6px; }
-.station-hit { margin-top: 8px; font-weight: 700; }
+:root{
+  --green:#1f7a3a;
+  --yellow:#facc15;
+  --orange:#f97316;
+  --red:#dc2626;
+  --purple:#7e22ce;
+  --dark:#080808;
+  --panel:#111;
+  --blue:#005bea;
+}
+
+body{
+  margin:0;
+  background:var(--dark);
+  color:white;
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+header{
+  background:#000;
+  padding:14px 20px;
+  font-size:26px;
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+.top-bar{
+  display:flex;
+}
+
+.zone{
+  flex:1;
+  text-align:center;
+  padding:10px 6px;
+  font-weight:900;
+  font-size:13px;
+  color:white;
+  border-right:1px solid rgba(255,255,255,.25);
+}
+
+.zone.normal{background:var(--green);}
+.zone.tstorm-watch{background:var(--yellow); color:#111;}
+.zone.tstorm-warning{background:var(--orange);}
+.zone.tornado-watch{background:var(--red);}
+.zone.tornado-warning{background:var(--purple);}
+.zone.tornado-emergency{
+  background:linear-gradient(90deg,var(--red),var(--purple));
+  animation:pulseEmergency 1s infinite;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns:70% 30%;
+  height:calc(100vh - 110px);
+}
+
+#map{
+  height:100%;
+  background:#111;
+}
+
+.panel{
+  background:var(--panel);
+  padding:14px;
+  overflow-y:auto;
+}
+
+.alert-box{
+  padding:13px;
+  margin-bottom:12px;
+  border-radius:8px;
+  cursor:pointer;
+  border-left:5px solid white;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);
+}
+
+.alert-box.normal{background:var(--green);}
+.alert-box.tstorm-watch{background:#a16207; color:white;}
+.alert-box.tstorm-warning{background:var(--orange);}
+.alert-box.tornado-watch{background:var(--red);}
+.alert-box.tornado-warning{background:var(--purple);}
+.alert-box.tornado-emergency{
+  background:linear-gradient(135deg,var(--red),var(--purple));
+  animation:pulseEmergency 1s infinite;
+}
+
+.alert-title{
+  font-weight:900;
+  font-size:17px;
+  margin-bottom:6px;
+}
+
+.alert-meta{
+  font-size:13px;
+  opacity:.92;
+  margin-bottom:8px;
+  line-height:1.35;
+}
+
+.station-hit{
+  margin-top:8px;
+  font-weight:700;
+  font-size:13px;
+  line-height:1.35;
+}
+
+.station-marker{
+  background:var(--blue);
+  border:2px solid white;
+  border-radius:50%;
+  width:14px;
+  height:14px;
+  box-shadow:0 0 8px rgba(0,0,0,.6);
+}
+
+.station-marker.impacted{
+  background:#fff;
+  border-color:#ff0000;
+  box-shadow:0 0 18px #ff0000;
+}
+
+#detailOverlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.78);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
+}
+
+.detail-card{
+  width:min(760px,92vw);
+  max-height:85vh;
+  overflow-y:auto;
+  background:#101010;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.65);
+}
+
+.detail-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.detail-title{
+  font-size:24px;
+  font-weight:900;
+}
+
+.close-btn{
+  background:#fff;
+  color:#111;
+  border:0;
+  border-radius:6px;
+  padding:8px 10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.detail-section{
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.15);
+}
+
+.detail-list{
+  margin:8px 0 0 18px;
+  padding:0;
+  line-height:1.6;
+}
+
+.leaflet-container{
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+@keyframes pulseEmergency{
+  0%{box-shadow:0 0 0 rgba(255,0,0,0);}
+  50%{box-shadow:0 0 24px rgba(255,0,255,.85);}
+  100%{box-shadow:0 0 0 rgba(255,0,0,0);}
+}
 </style>
 </head>
+
 <body>
 
 <header>MEMS WEATHER CENTER</header>
 
 <div class="top-bar">
-  <div class="zone normal">LITTLE ROCK</div>
-  <div class="zone normal">NLR</div>
-  <div class="zone normal">MAUMELLE</div>
-  <div class="zone normal">SHERWOOD</div>
-  <div class="zone normal">CABOT</div>
-  <div class="zone normal">LONOKE CO</div>
-  <div class="zone normal">SHERIDAN</div>
-  <div class="zone normal">GRANT CO</div>
+  <div class="zone normal" data-zone="little-rock">LITTLE ROCK</div>
+  <div class="zone normal" data-zone="nlr">NLR</div>
+  <div class="zone normal" data-zone="maumelle">MAUMELLE</div>
+  <div class="zone normal" data-zone="sherwood">SHERWOOD</div>
+  <div class="zone normal" data-zone="cabot">CABOT</div>
+  <div class="zone normal" data-zone="lonoke">LONOKE CO</div>
+  <div class="zone normal" data-zone="sheridan">SHERIDAN</div>
+  <div class="zone normal" data-zone="grant">GRANT CO</div>
 </div>
 
 <div class="layout">
   <div id="map"></div>
-  <div class="panel"><div id="alerts"></div></div>
+  <div class="panel">
+    <div id="alerts"></div>
+  </div>
+</div>
+
+<div id="detailOverlay">
+  <div class="detail-card">
+    <div class="detail-header">
+      <div>
+        <div class="detail-title" id="detailTitle"></div>
+        <div class="alert-meta" id="detailMeta"></div>
+      </div>
+      <button class="close-btn" onclick="closeDetail()">CLOSE</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
 <script>
-const map = L.map("map").setView([34.75, -92.25], 7);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png").addTo(map);
+const AR_BOUNDS = L.latLngBounds(
+  [33.00, -94.75],
+  [36.65, -89.55]
+);
+
+const map = L.map("map", {
+  maxBounds: AR_BOUNDS.pad(0.08),
+  maxBoundsViscosity: 1.0
+}).fitBounds(AR_BOUNDS);
+
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 20,
+  attribution: "© OpenStreetMap © CARTO"
+}).addTo(map);
 
 const stations = [
-  { name: "Cabot",        lat: 34.97, lng: -92.01 },
-  { name: "Sheridan",     lat: 34.31, lng: -92.39 },
-  { name: "Maumelle",     lat: 34.85, lng: -92.40 },
-  { name: "Sherwood",     lat: 34.83, lng: -92.20 },
-  { name: "Little Rock",  lat: 34.74, lng: -92.28 }
+  { name:"Station 1", area:"Little Rock", zone:["little-rock"], lat:34.7433819, lng:-92.2843613 },
+  { name:"Station 3", area:"Little Rock", zone:["little-rock"], lat:34.6690390, lng:-92.3581024 },
+  { name:"Station 4", area:"Little Rock / NLR", zone:["little-rock","nlr"], lat:34.7593041, lng:-92.3802302 },
+  { name:"Station 10", area:"Little Rock", zone:["little-rock"], lat:34.7991817, lng:-92.4554265 },
+  { name:"Cabot Station", area:"Cabot / Lonoke County", zone:["cabot","lonoke"], lat:34.9732158, lng:-92.0171126 },
+  { name:"Gravel Ridge Station", area:"NLR / Sherwood", zone:["nlr","sherwood"], lat:34.8686392, lng:-92.1978871 },
+  { name:"Maumelle Station", area:"Maumelle", zone:["maumelle"], lat:34.8569051, lng:-92.4070432 },
+  { name:"MEMS North", area:"Little Rock / NLR", zone:["little-rock","nlr"], lat:34.7812027, lng:-92.2743301 },
+  { name:"North Pulaski Station", area:"North Pulaski / Sherwood", zone:["nlr","sherwood"], lat:34.9403325, lng:-92.1683398 },
+  { name:"Sheridan Station", area:"Sheridan / Grant County", zone:["sheridan","grant"], lat:34.3170329, lng:-92.3955182 },
+  { name:"Sherwood Station", area:"Sherwood", zone:["sherwood"], lat:34.8319372, lng:-92.2078739 },
+  { name:"Arch St Station", area:"South Pulaski / Grant County", zone:["sheridan","grant"], lat:34.6174833, lng:-92.3157304 }
+];
+
+const towns = [
+  { name:"Little Rock", zone:["little-rock"], lat:34.7465, lng:-92.2896 },
+  { name:"North Little Rock", zone:["nlr"], lat:34.7695, lng:-92.2671 },
+  { name:"Maumelle", zone:["maumelle"], lat:34.8668, lng:-92.4043 },
+  { name:"Sherwood", zone:["sherwood"], lat:34.8151, lng:-92.2243 },
+  { name:"Cabot", zone:["cabot","lonoke"], lat:34.9745, lng:-92.0165 },
+  { name:"Lonoke", zone:["lonoke"], lat:34.7839, lng:-91.8999 },
+  { name:"Sheridan", zone:["sheridan","grant"], lat:34.3070, lng:-92.4013 }
 ];
 
 const stationLayer = L.layerGroup().addTo(map);
-const warningLayer = L.geoJSON(null, { style: { color: "#ff0000", fillOpacity: .35 } }).addTo(map);
 
-stations.forEach(s => {
-  L.circleMarker([s.lat, s.lng], { radius: 6, color: "#fff", fillColor: "#005bea", fillOpacity: 1 })
-    .bindPopup(s.name).addTo(stationLayer);
+const warningLayer = L.geoJSON(null, {
+  style: function(feature){
+    const severity = getSeverity(feature.properties);
+    return {
+      color: severity === "tornado-emergency" ? "#ff00ff" :
+             severity === "tornado-warning" ? "#7e22ce" :
+             "#f97316",
+      weight: severity === "tornado-emergency" ? 5 : 4,
+      fillColor: severity === "tornado-emergency" ? "#dc2626" :
+                 severity === "tornado-warning" ? "#7e22ce" :
+                 "#f97316",
+      fillOpacity: severity === "tornado-emergency" ? .42 : .34
+    };
+  },
+  onEachFeature: function(feature, layer){
+    layer.on("click", function(){
+      const detail = buildAlertDetail(feature);
+      openDetail(detail);
+    });
+  }
+}).addTo(map);
+
+const stationMarkers = {};
+
+stations.forEach(station => {
+  const icon = L.divIcon({
+    className:"",
+    html:`<div class="station-marker" id="marker-${slug(station.name)}"></div>`,
+    iconSize:[18,18],
+    iconAnchor:[9,9]
+  });
+
+  const marker = L.marker([station.lat, station.lng], { icon })
+    .bindPopup(`<strong>${station.name}</strong><br>${station.area}`)
+    .addTo(stationLayer);
+
+  stationMarkers[station.name] = marker;
 });
 
-// Format county list into readable comma-separated string
-function formatAreas(areaDesc) {
-  return areaDesc
-    ? areaDesc.split(";").map(s => s.trim()).filter(Boolean).join(", ")
-    : "";
-}
+let latestAlerts = [];
 
-function resetZones() {
-  document.querySelectorAll(".zone").forEach(z => {
-    z.className = "zone normal";
-  });
-}
-
-function updateZones(impacted, event) {
-  const zones = document.querySelectorAll(".zone");
-  const indexMap = {
-    "Little Rock": 0,
-    "Maumelle":    2,
-    "Sherwood":    3,
-    "Cabot":       4,
-    "Sheridan":    6
-  };
-  impacted.forEach(s => {
-    const idx = indexMap[s.name];
-    if (idx === undefined) return;
-    zones[idx].classList.remove("normal");
-    zones[idx].classList.add(event === "Tornado Warning" ? "warning" : "watch");
-  });
-}
-
-async function loadAlerts() {
+async function loadAlerts(){
   const container = document.getElementById("alerts");
   container.innerHTML = "";
   warningLayer.clearLayers();
-  resetZones();
+  latestAlerts = [];
 
-  try {
+  resetZones();
+  resetStationMarkers();
+
+  try{
     const res = await fetch("https://api.weather.gov/alerts/active", {
-      headers: { "Accept": "application/geo+json" }
+      headers:{ "Accept":"application/geo+json" }
     });
+
+    if(!res.ok){
+      throw new Error("NWS API failed: " + res.status);
+    }
+
     const data = await res.json();
 
-const alerts = data.features.filter(a => {
-  const event = a.properties.event;
-  const area = a.properties.areaDesc || "";
+    const alerts = data.features
+      .filter(isArkansasRelevantAlert)
+      .sort(sortAlerts);
 
-  const isRelevant =
-    area.includes("AR");
+    latestAlerts = alerts;
 
-  return (
-    (event === "Tornado Warning" ||
-     event === "Tornado Watch" ||
-     event === "Severe Thunderstorm Watch") &&
-    isRelevant
-  );
-}););
-
-    if (alerts.length === 0) {
-      container.innerHTML = `<div class="alert-box" style="background:#1e3a1e">No active alerts for this area.</div>`;
+    if(!alerts.length){
+      container.innerHTML = `
+        <div class="alert-box normal">
+          <div class="alert-title">No Active Watches or Warnings</div>
+          <div class="alert-meta">Arkansas is clear for the tracked alert types.</div>
+        </div>
+      `;
+      return;
     }
 
     alerts.forEach(alert => {
       const p = alert.properties;
-      const event = p.event;
-      const areaDesc = p.areaDesc || "";
-      let impacted = [];
+      const severity = getSeverity(p);
+      const detail = buildAlertDetail(alert);
 
-      if (event === "Tornado Warning" && alert.geometry) {
+      if(shouldDrawPolygon(alert)){
         warningLayer.addData(alert);
-        impacted = stations.filter(st => {
-          const pt = turf.point([st.lng, st.lat]);
-          return turf.booleanPointInPolygon(pt, alert);
-        });
-        updateZones(impacted, event);
       }
 
-      container.innerHTML += `
-        <div class="alert-box ${event.includes("Warning") ? "warning" : "watch"}">
-          <div class="alert-title">${event}</div>
-          <div>${formatAreas(areaDesc)}</div>
+      applyZoneStatus(detail.affectedStations, detail.affectedTowns, severity);
+      highlightImpactedStations(detail.affectedStations);
+
+      container.insertAdjacentHTML("beforeend", `
+        <div class="alert-box ${severity}" onclick='openDetailById("${alert.id}")'>
+          <div class="alert-title">${formatTitle(p)}</div>
+          <div class="alert-meta">
+            <strong>Expires:</strong> ${formatTime24(p.expires)}<br>
+            <strong>Areas:</strong> ${formatAreas(p.areaDesc)}
+          </div>
           <div class="station-hit">
-            ${event === "Tornado Warning"
-              ? (impacted.length ? impacted.map(s => s.name).join(", ") : "No stations impacted")
-              : "Watch listed only — polygon hidden"}
+            <strong>Affected stations:</strong><br>
+            ${detail.affectedStations.length ? detail.affectedStations.map(s => s.name).join(", ") : "No MEMS stations currently inside the alert area."}
           </div>
         </div>
-      `;
+      `);
     });
 
-    if (warningLayer.getLayers().length) {
-      map.fitBounds(warningLayer.getBounds(), { padding: [25, 25] });
+    if(warningLayer.getLayers().length){
+      map.fitBounds(warningLayer.getBounds(), { padding:[25,25] });
+    }else{
+      map.fitBounds(AR_BOUNDS);
     }
 
-  } catch (err) {
+  }catch(err){
     console.error(err);
     container.innerHTML = `
-      <div class="alert-box warning">
-        <div class="alert-title">API failed</div>
-        <div>${err.message}</div>
+      <div class="alert-box tornado-warning">
+        <div class="alert-title">Unable to load alerts</div>
+        <div class="alert-meta">${err.message}</div>
       </div>
     `;
   }
 }
 
+function isArkansasRelevantAlert(alert){
+  const p = alert.properties;
+  const event = p.event || "";
+  const ugc = p.geocode?.UGC || [];
+  const area = p.areaDesc || "";
+
+  const isAR =
+    ugc.some(code => code.startsWith("AR")) ||
+    area.includes(", AR") ||
+    area.includes(" AR;") ||
+    area.endsWith(" AR");
+
+  const tracked =
+    event === "Tornado Watch" ||
+    event === "Severe Thunderstorm Watch" ||
+    event === "Severe Thunderstorm Warning" ||
+    event === "Tornado Warning";
+
+  return isAR && tracked;
+}
+
+function shouldDrawPolygon(alert){
+  const event = alert.properties.event || "";
+  const severity = getSeverity(alert.properties);
+
+  return (
+    alert.geometry &&
+    (
+      event === "Tornado Warning" ||
+      event === "Severe Thunderstorm Warning" ||
+      severity === "tornado-emergency"
+    )
+  );
+}
+
+function getSeverity(p){
+  const event = p.event || "";
+  const text = `${p.headline || ""} ${p.description || ""} ${p.instruction || ""}`.toUpperCase();
+
+  if(event === "Tornado Warning" && text.includes("TORNADO EMERGENCY")){
+    return "tornado-emergency";
+  }
+
+  if(event === "Tornado Warning") return "tornado-warning";
+  if(event === "Tornado Watch") return "tornado-watch";
+  if(event === "Severe Thunderstorm Warning") return "tstorm-warning";
+  if(event === "Severe Thunderstorm Watch") return "tstorm-watch";
+
+  return "normal";
+}
+
+function buildAlertDetail(alert){
+  const p = alert.properties;
+  const severity = getSeverity(p);
+  const event = p.event || "";
+  const motion = parseStormMotion(p);
+  const affectedStations = [];
+  const affectedTowns = [];
+
+  if(alert.geometry){
+    stations.forEach(station => {
+      const pt = turf.point([station.lng, station.lat]);
+      if(turf.booleanPointInPolygon(pt, alert)){
+        affectedStations.push(station);
+      }
+    });
+
+    towns.forEach(town => {
+      const pt = turf.point([town.lng, town.lat]);
+      if(turf.booleanPointInPolygon(pt, alert)){
+        affectedTowns.push(town);
+      }
+    });
+  }else{
+    const area = p.areaDesc || "";
+    stations.forEach(station => {
+      if(areaLooksRelevantToStation(area, station)){
+        affectedStations.push(station);
+      }
+    });
+    towns.forEach(town => {
+      if(areaLooksRelevantToTown(area, town)){
+        affectedTowns.push(town);
+      }
+    });
+  }
+
+  const stationsWithTimes = affectedStations.map(station => ({
+    ...station,
+    impact: estimateImpactTime(alert, station, motion)
+  }));
+
+  const townsWithTimes = affectedTowns.map(town => ({
+    ...town,
+    impact: estimateImpactTime(alert, town, motion)
+  }));
+
+  return {
+    id: alert.id,
+    title: formatTitle(p),
+    event,
+    severity,
+    expires: p.expires,
+    areaDesc: p.areaDesc || "",
+    motion,
+    affectedStations: stationsWithTimes,
+    affectedTowns: townsWithTimes,
+    description: p.description || "",
+    instruction: p.instruction || ""
+  };
+}
+
+function areaLooksRelevantToStation(area, station){
+  const a = area.toLowerCase();
+  return station.zone.some(z => {
+    if(z === "little-rock") return a.includes("pulaski");
+    if(z === "nlr") return a.includes("pulaski");
+    if(z === "maumelle") return a.includes("pulaski");
+    if(z === "sherwood") return a.includes("pulaski");
+    if(z === "cabot") return a.includes("lonoke");
+    if(z === "lonoke") return a.includes("lonoke");
+    if(z === "sheridan") return a.includes("grant");
+    if(z === "grant") return a.includes("grant");
+    return false;
+  });
+}
+
+function areaLooksRelevantToTown(area, town){
+  const a = area.toLowerCase();
+  return town.zone.some(z => {
+    if(z === "little-rock") return a.includes("pulaski");
+    if(z === "nlr") return a.includes("pulaski");
+    if(z === "maumelle") return a.includes("pulaski");
+    if(z === "sherwood") return a.includes("pulaski");
+    if(z === "cabot") return a.includes("lonoke");
+    if(z === "lonoke") return a.includes("lonoke");
+    if(z === "sheridan") return a.includes("grant");
+    if(z === "grant") return a.includes("grant");
+    return false;
+  });
+}
+
+function parseStormMotion(p){
+  const text = `${p.description || ""} ${p.instruction || ""}`;
+  const match = text.match(/moving\s+([A-Z]+)\s+at\s+(\d+)\s+mph/i);
+
+  if(!match){
+    return null;
+  }
+
+  return {
+    direction: match[1].toUpperCase(),
+    speed: Number(match[2])
+  };
+}
+
+function estimateImpactTime(alert, point, motion){
+  if(!alert.geometry || !motion || !motion.speed){
+    return "Timing not available";
+  }
+
+  try{
+    const centroid = turf.centroid(alert);
+    const target = turf.point([point.lng, point.lat]);
+    const miles = turf.distance(centroid, target, { units:"miles" });
+    const minutes = Math.round((miles / motion.speed) * 60);
+
+    if(minutes <= 0) return "Now";
+    if(minutes > 180) return "3+ hr";
+
+    const impact = new Date(Date.now() + minutes * 60000);
+
+    return `~${minutes} min / ${formatTime24(impact.toISOString())}`;
+  }catch(e){
+    return "Timing not available";
+  }
+}
+
+function applyZoneStatus(stationsHit, townsHit, severity){
+  const affectedZones = new Set();
+
+  stationsHit.forEach(s => s.zone.forEach(z => affectedZones.add(z)));
+  townsHit.forEach(t => t.zone.forEach(z => affectedZones.add(z)));
+
+  affectedZones.forEach(zoneName => {
+    const el = document.querySelector(`[data-zone="${zoneName}"]`);
+    if(!el) return;
+
+    setZoneSeverity(el, severity);
+  });
+}
+
+function setZoneSeverity(el, severity){
+  const rank = {
+    "normal":0,
+    "tstorm-watch":1,
+    "tstorm-warning":2,
+    "tornado-watch":3,
+    "tornado-warning":4,
+    "tornado-emergency":5
+  };
+
+  const current = Array.from(el.classList).find(c => rank[c] !== undefined) || "normal";
+
+  if(rank[severity] >= rank[current]){
+    el.className = `zone ${severity}`;
+  }
+}
+
+function highlightImpactedStations(stationsHit){
+  stationsHit.forEach(station => {
+    const markerEl = document.getElementById(`marker-${slug(station.name)}`);
+    if(markerEl){
+      markerEl.classList.add("impacted");
+    }
+  });
+}
+
+function resetStationMarkers(){
+  Object.values(stationMarkers).forEach(marker => {
+    const el = document.getElementById(`marker-${slug(marker.getPopup().getContent().replace(/<[^>]*>/g,"").split("<br>")[0])}`);
+    if(el) el.classList.remove("impacted");
+  });
+
+  document.querySelectorAll(".station-marker").forEach(el => el.classList.remove("impacted"));
+}
+
+function resetZones(){
+  document.querySelectorAll(".zone").forEach(zone => {
+    zone.className = "zone normal";
+  });
+}
+
+function openDetailById(id){
+  const alert = latestAlerts.find(a => a.id === id);
+  if(!alert) return;
+  openDetail(buildAlertDetail(alert));
+}
+
+function openDetail(detail){
+  document.getElementById("detailTitle").textContent = detail.title;
+
+  document.getElementById("detailMeta").innerHTML = `
+    <strong>Expires:</strong> ${formatTime24(detail.expires)}<br>
+    <strong>Motion:</strong> ${detail.motion ? `${detail.motion.direction} at ${detail.motion.speed} mph` : "Not available"}<br>
+    <strong>Areas:</strong> ${formatAreas(detail.areaDesc)}
+  `;
+
+  const stationItems = detail.affectedStations.length
+    ? detail.affectedStations.map(s => `<li>${s.name} — ${s.area} — <strong>${s.impact}</strong></li>`).join("")
+    : "<li>No MEMS stations currently inside this alert area.</li>";
+
+  const townItems = detail.affectedTowns.length
+    ? detail.affectedTowns.map(t => `<li>${t.name} — <strong>${t.impact}</strong></li>`).join("")
+    : "<li>No tracked towns currently inside this alert area.</li>";
+
+  document.getElementById("detailBody").innerHTML = `
+    <div class="detail-section">
+      <strong>Affected Stations</strong>
+      <ul class="detail-list">${stationItems}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Affected Towns</strong>
+      <ul class="detail-list">${townItems}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Instruction</strong>
+      <div>${detail.instruction || "No instruction included."}</div>
+    </div>
+  `;
+
+  document.getElementById("detailOverlay").style.display = "flex";
+}
+
+function closeDetail(){
+  document.getElementById("detailOverlay").style.display = "none";
+}
+
+function formatTitle(p){
+  const severity = getSeverity(p);
+  if(severity === "tornado-emergency"){
+    return "TORNADO EMERGENCY";
+  }
+  return p.headline || p.event || "Weather Alert";
+}
+
+function formatAreas(areaDesc){
+  if(!areaDesc) return "None listed";
+  const areas = areaDesc.split(";").map(a => a.trim()).filter(Boolean);
+  if(areas.length <= 8) return areas.join(", ");
+  return areas.slice(0,8).join(", ") + `, +${areas.length - 8} more`;
+}
+
+function formatTime24(value){
+  if(!value) return "N/A";
+  return new Date(value).toLocaleTimeString("en-US", {
+    hour:"2-digit",
+    minute:"2-digit",
+    hour12:false
+  });
+}
+
+function sortAlerts(a,b){
+  const rank = {
+    "tornado-emergency":5,
+    "tornado-warning":4,
+    "tornado-watch":3,
+    "tstorm-warning":2,
+    "tstorm-watch":1,
+    "normal":0
+  };
+
+  return rank[getSeverity(b.properties)] - rank[getSeverity(a.properties)];
+}
+
+function slug(value){
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+}
+
 loadAlerts();
 setInterval(loadAlerts, 60000);
 </script>
+
 </body>
 </html>
