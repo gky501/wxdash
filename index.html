@@ -17,24 +17,35 @@
   --blue:#005bea;
 }
 
-body{
+*{box-sizing:border-box;}
+
+html,body{
+  height:100%;
   margin:0;
   background:var(--dark);
   color:white;
   font-family:Arial, Helvetica, sans-serif;
+  overflow:hidden;
+}
+
+body{
+  display:flex;
+  flex-direction:column;
 }
 
 header{
+  height:58px;
   background:#000;
-  padding:12px 18px;
+  padding:10px 18px;
   display:flex;
   justify-content:space-between;
   align-items:center;
   gap:20px;
+  flex-shrink:0;
 }
 
 .header-title{
-  font-size:26px;
+  font-size:25px;
   font-weight:900;
   letter-spacing:2px;
 }
@@ -47,7 +58,9 @@ header{
 }
 
 .top-bar{
+  height:38px;
   display:flex;
+  flex-shrink:0;
 }
 
 .zone{
@@ -71,13 +84,15 @@ header{
 }
 
 .layout{
+  flex:1;
+  min-height:0;
   display:grid;
   grid-template-columns:70% 30%;
-  height:calc(100vh - 114px);
 }
 
 #map{
   height:100%;
+  min-height:0;
   background:#111;
 }
 
@@ -85,6 +100,7 @@ header{
   background:var(--panel);
   padding:14px;
   overflow-y:auto;
+  min-height:0;
 }
 
 .alert-box{
@@ -97,7 +113,7 @@ header{
 }
 
 .alert-box.normal{background:var(--green);}
-.alert-box.tstorm-watch{background:#a16207; color:white;}
+.alert-box.tstorm-watch{background:#a16207;}
 .alert-box.tstorm-warning{background:var(--orange);}
 .alert-box.tornado-watch{background:var(--red);}
 .alert-box.tornado-warning{background:var(--purple);}
@@ -159,6 +175,93 @@ header{
   box-shadow:0 0 10px rgba(250,204,21,.75);
 }
 
+.bottom-bar{
+  height:104px;
+  flex-shrink:0;
+  display:grid;
+  grid-template-columns:170px repeat(5, 1fr);
+  gap:10px;
+  padding:10px 12px;
+  background:linear-gradient(90deg,#000,#111);
+  border-top:3px solid #f47b26;
+}
+
+.conditions-title{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:10px;
+  border-radius:10px;
+  background:#050505;
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.conditions-title span:first-child{
+  color:#f47b26;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+
+.conditions-title span:last-child{
+  font-size:20px;
+  font-weight:900;
+  margin-top:4px;
+}
+
+.condition-card{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#171717;
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+}
+
+.condition-card .label{
+  font-size:12px;
+  font-weight:900;
+  color:#aaa;
+  letter-spacing:.08em;
+  margin-bottom:5px;
+}
+
+.condition-card .value{
+  font-size:25px;
+  font-weight:900;
+  line-height:1;
+}
+
+.condition-card .sub{
+  font-size:12px;
+  color:#ddd;
+  margin-top:6px;
+}
+
+.condition-card.temp{border-left:5px solid #38bdf8;}
+.condition-card.rain{border-left:5px solid #22c55e;}
+.condition-card.wind{border-left:5px solid #f97316;}
+.condition-card.lightning{border-left:5px solid #facc15;}
+.condition-card.updated{border-left:5px solid #94a3b8;}
+
+.condition-card.warn{
+  background:linear-gradient(135deg,#7f1d1d,#111);
+  border-color:#ef4444;
+}
+
+.condition-card.caution{
+  background:linear-gradient(135deg,#78350f,#111);
+  border-color:#f97316;
+}
+
+.condition-card.lightning-near{
+  background:linear-gradient(135deg,#713f12,#111);
+  border-color:#facc15;
+  animation:pulseLightning 1.4s infinite;
+}
+
 #detailOverlay{
   display:none;
   position:fixed;
@@ -215,52 +318,16 @@ header{
   line-height:1.6;
 }
 
-.leaflet-container{
-  font-family:Arial, Helvetica, sans-serif;
-}
-
 @keyframes pulseEmergency{
   0%{box-shadow:0 0 0 rgba(255,0,0,0);}
   50%{box-shadow:0 0 24px rgba(255,0,255,.85);}
   100%{box-shadow:0 0 0 rgba(255,0,0,0);}
 }
-  .bottom-bar{
-  width:100%;
-  background:#000;
-  border-top:2px solid rgba(255,255,255,.15);
 
-  padding:10px 16px;
-
-  font-size:14px;
-  font-weight:900;
-  letter-spacing:.08em;
-
-  color:#e5e7eb;
-
-  display:flex;
-  align-items:center;
-}
-  .bottom-bar{
-  background:linear-gradient(90deg,#000,#111);
-  border-top:2px solid #f47b26;
-}
-  .bottom-bar{
-  width:100%;
-  background:linear-gradient(90deg,#000,#111);
-  border-top:2px solid #f47b26;
-  padding:10px 16px;
-  font-size:14px;
-  font-weight:900;
-  letter-spacing:.06em;
-  color:#e5e7eb;
-  display:flex;
-  align-items:center;
-  gap:14px;
-  box-sizing:border-box;
-}
-
-.bottom-label{
-  color:#f47b26;
+@keyframes pulseLightning{
+  0%{box-shadow:0 0 0 rgba(250,204,21,0);}
+  50%{box-shadow:0 0 18px rgba(250,204,21,.8);}
+  100%{box-shadow:0 0 0 rgba(250,204,21,0);}
 }
 </style>
 </head>
@@ -292,10 +359,42 @@ header{
     <div id="alerts"></div>
   </div>
 </div>
-<div class="bottom-bar" id="bottomBar">
-  <span class="bottom-label">CURRENT CONDITIONS</span>
-  <span id="tempestStatus">Loading Tempest...</span>
-  
+
+<div class="bottom-bar">
+  <div class="conditions-title">
+    <span>STATION 1</span>
+    <span>LIVE WEATHER</span>
+  </div>
+
+  <div class="condition-card temp" id="tempCard">
+    <div class="label">TEMP</div>
+    <div class="value" id="tempValue">--°</div>
+    <div class="sub" id="humidityValue">Humidity --%</div>
+  </div>
+
+  <div class="condition-card rain" id="rainCard">
+    <div class="label">RAIN</div>
+    <div class="value" id="rainValue">--"</div>
+    <div class="sub" id="rainRateValue">Rate --"/hr</div>
+  </div>
+
+  <div class="condition-card wind" id="windCard">
+    <div class="label">WIND</div>
+    <div class="value" id="windValue">--G--</div>
+    <div class="sub" id="windSubValue">Direction --</div>
+  </div>
+
+  <div class="condition-card lightning" id="lightningCard">
+    <div class="label">LIGHTNING</div>
+    <div class="value" id="lightningValue">NONE</div>
+    <div class="sub" id="lightningSubValue">No recent strike</div>
+  </div>
+
+  <div class="condition-card updated" id="updatedCard">
+    <div class="label">TEMPEST UPDATED</div>
+    <div class="value" id="tempestUpdatedValue">--:--</div>
+    <div class="sub" id="tempestAgeValue">Waiting for data</div>
+  </div>
 </div>
 
 <div id="detailOverlay">
@@ -317,6 +416,7 @@ header{
 <script>
 const TEMPEST_STATION_ID = "136293";
 const TEMPEST_TOKEN = "a394fe76-fe00-4227-836b-f574a15ce385";
+
 const REFRESH_SECONDS = 60;
 const USER_ACTIVITY_HOLD_MS = 5 * 60 * 1000;
 
@@ -324,11 +424,7 @@ let secondsUntilRefresh = REFRESH_SECONDS;
 let lastUserMapActivity = 0;
 let latestPanelAlerts = [];
 
-const AR_BOUNDS = L.latLngBounds(
-  [33.00, -94.75],
-  [36.65, -89.55]
-);
-
+const AR_BOUNDS = L.latLngBounds([33.00, -94.75], [36.65, -89.55]);
 const AR_CENTER = [34.75, -92.25];
 const AR_ZOOM = 7;
 
@@ -444,8 +540,8 @@ areasOfInterest.forEach(poi => {
   });
 
   L.marker([poi.lat, poi.lng], { icon })
-  .bindPopup(`<strong>${poi.name}</strong><br>Watch radius: ${poi.radius}`)
-  .addTo(poiLayer);
+    .bindPopup(`<strong>${poi.name}</strong><br>Watch radius: ${poi.radius || "N/A"}`)
+    .addTo(poiLayer);
 });
 
 L.control.layers(null, {
@@ -456,11 +552,10 @@ L.control.layers(null, {
   collapsed:false,
   position:"topleft"
 }).addTo(map);
-async function loadTempestConditions(){
-  const el = document.getElementById("tempestStatus");
 
-  if(!TEMPEST_STATION_ID || TEMPEST_STATION_ID === "YOUR_STATION_ID"){
-    el.textContent = "Tempest not configured";
+async function loadTempestConditions(){
+  if(!TEMPEST_STATION_ID || TEMPEST_TOKEN === "PASTE_YOUR_TOKEN_HERE"){
+    setTempestUnavailable("Token not configured");
     return;
   }
 
@@ -473,7 +568,6 @@ async function loadTempestConditions(){
     }
 
     const data = await res.json();
-
     const obs = data.obs && data.obs[0];
 
     if(!obs){
@@ -481,39 +575,78 @@ async function loadTempestConditions(){
     }
 
     const airTempF = cToF(obs.air_temperature);
+    const humidity = safeRound(obs.relative_humidity);
     const windMph = msToMph(obs.wind_avg);
     const gustMph = msToMph(obs.wind_gust);
-    const rainIn = mmToIn(obs.precip_accum_local_day);
-    const lightningDistance = obs.lightning_strike_last_distance;
+    const windDir = degToCompass(obs.wind_direction);
+    const rainDay = mmToIn(obs.precip_accum_local_day);
+    const rainRate = mmToIn(obs.precip);
+    const lightningKm = obs.lightning_strike_last_distance;
+    const lightningMiles = lightningKm ? Math.round(lightningKm * 0.621371) : null;
     const lightningTime = obs.lightning_strike_last_epoch;
+    const obsEpoch = obs.timestamp || obs.epoch;
+    const ageSec = obsEpoch ? Math.floor((Date.now() / 1000) - obsEpoch) : null;
 
-    const lightningText = lightningTime
-      ? `${lightningDistance} mi`
-      : "None recent";
+    document.getElementById("tempValue").textContent = `${airTempF}°`;
+    document.getElementById("humidityValue").textContent = `Humidity ${humidity}%`;
 
-    el.textContent =
-      `TEMP ${airTempF}°F  /  RAIN ${rainIn}"  /  WIND ${windMph}G${gustMph} MPH  /  LIGHTNING ${lightningText}`;
+    document.getElementById("rainValue").textContent = `${rainDay}"`;
+    document.getElementById("rainRateValue").textContent = `Rate ${rainRate}"/hr`;
+
+    document.getElementById("windValue").textContent = `${windMph}G${gustMph}`;
+    document.getElementById("windSubValue").textContent = `${windDir} / MPH`;
+
+    if(lightningTime && lightningMiles !== null){
+      document.getElementById("lightningValue").textContent = `${lightningMiles} MI`;
+      document.getElementById("lightningSubValue").textContent = `Last strike distance`;
+    }else{
+      document.getElementById("lightningValue").textContent = "NONE";
+      document.getElementById("lightningSubValue").textContent = "No recent strike";
+    }
+
+    document.getElementById("tempestUpdatedValue").textContent = obsEpoch ? formatTime24(new Date(obsEpoch * 1000).toISOString()) : "--:--";
+    document.getElementById("tempestAgeValue").textContent = ageSec !== null ? `${ageSec}s ago` : "Age unavailable";
+
+    updateConditionCardClasses(gustMph, lightningMiles, ageSec);
 
   }catch(err){
     console.error("Tempest error:", err);
-    el.textContent = "Tempest unavailable";
+    setTempestUnavailable(err.message);
   }
 }
 
-function cToF(c){
-  if(c === null || c === undefined) return "--";
-  return Math.round((c * 9 / 5) + 32);
+function updateConditionCardClasses(gustMph, lightningMiles, ageSec){
+  const windCard = document.getElementById("windCard");
+  const lightningCard = document.getElementById("lightningCard");
+  const updatedCard = document.getElementById("updatedCard");
+
+  windCard.className = "condition-card wind";
+  lightningCard.className = "condition-card lightning";
+  updatedCard.className = "condition-card updated";
+
+  if(gustMph >= 50) windCard.classList.add("warn");
+  else if(gustMph >= 35) windCard.classList.add("caution");
+
+  if(lightningMiles !== null && lightningMiles <= 10) lightningCard.classList.add("lightning-near");
+  else if(lightningMiles !== null && lightningMiles <= 20) lightningCard.classList.add("caution");
+
+  if(ageSec !== null && ageSec > 180) updatedCard.classList.add("warn");
+  else if(ageSec !== null && ageSec > 90) updatedCard.classList.add("caution");
 }
 
-function msToMph(ms){
-  if(ms === null || ms === undefined) return "--";
-  return Math.round(ms * 2.23694);
+function setTempestUnavailable(reason){
+  document.getElementById("tempValue").textContent = "--°";
+  document.getElementById("humidityValue").textContent = reason;
+  document.getElementById("rainValue").textContent = "--";
+  document.getElementById("rainRateValue").textContent = "Rate --";
+  document.getElementById("windValue").textContent = "--G--";
+  document.getElementById("windSubValue").textContent = "Direction --";
+  document.getElementById("lightningValue").textContent = "--";
+  document.getElementById("lightningSubValue").textContent = "Unavailable";
+  document.getElementById("tempestUpdatedValue").textContent = "--:--";
+  document.getElementById("tempestAgeValue").textContent = "Tempest unavailable";
 }
 
-function mmToIn(mm){
-  if(mm === null || mm === undefined) return "--";
-  return (mm / 25.4).toFixed(2);
-}
 async function loadAlerts(){
   const container = document.getElementById("alerts");
   container.innerHTML = "";
@@ -601,11 +734,7 @@ async function loadAlerts(){
 
 function maintainMapViewAfterRefresh(){
   const userRecentlyActive = Date.now() - lastUserMapActivity < USER_ACTIVITY_HOLD_MS;
-
-  if(userRecentlyActive){
-    return;
-  }
-
+  if(userRecentlyActive) return;
   map.setView(AR_CENTER, AR_ZOOM, { animate:false });
 }
 
@@ -636,17 +765,9 @@ function isNwsLittleRockAlert(alert){
   const sender = (p.sender || "").toUpperCase();
   const params = p.parameters || {};
 
-  const awips = Array.isArray(params.AWIPSidentifier)
-    ? params.AWIPSidentifier.join(" ").toUpperCase()
-    : "";
-
-  const wmo = Array.isArray(params.WMOidentifier)
-    ? params.WMOidentifier.join(" ").toUpperCase()
-    : "";
-
-  const nwsHeadline = Array.isArray(params.NWSheadline)
-    ? params.NWSheadline.join(" ").toUpperCase()
-    : "";
+  const awips = Array.isArray(params.AWIPSidentifier) ? params.AWIPSidentifier.join(" ").toUpperCase() : "";
+  const wmo = Array.isArray(params.WMOidentifier) ? params.WMOidentifier.join(" ").toUpperCase() : "";
+  const nwsHeadline = Array.isArray(params.NWSheadline) ? params.NWSheadline.join(" ").toUpperCase() : "";
 
   return (
     senderName.includes("LITTLE ROCK") ||
@@ -662,13 +783,10 @@ function shouldDrawPolygon(alert){
   const event = alert.properties.event || "";
   const severity = getSeverity(alert.properties);
 
-  return (
-    alert.geometry &&
-    (
-      event === "Tornado Warning" ||
-      event === "Severe Thunderstorm Warning" ||
-      severity === "tornado-emergency"
-    )
+  return alert.geometry && (
+    event === "Tornado Warning" ||
+    event === "Severe Thunderstorm Warning" ||
+    severity === "tornado-emergency"
   );
 }
 
@@ -676,10 +794,7 @@ function getSeverity(p){
   const event = p.event || "";
   const text = `${p.headline || ""} ${p.description || ""} ${p.instruction || ""}`.toUpperCase();
 
-  if(event === "Tornado Warning" && text.includes("TORNADO EMERGENCY")){
-    return "tornado-emergency";
-  }
-
+  if(event === "Tornado Warning" && text.includes("TORNADO EMERGENCY")) return "tornado-emergency";
   if(event === "Tornado Warning") return "tornado-warning";
   if(event === "Tornado Watch") return "tornado-watch";
   if(event === "Severe Thunderstorm Warning") return "tstorm-warning";
@@ -692,10 +807,7 @@ function formatTitle(p){
   const severity = getSeverity(p);
   const number = getAlertNumber(p);
 
-  if(severity === "tornado-emergency"){
-    return number ? `Tornado Emergency #${number}` : "Tornado Emergency";
-  }
-
+  if(severity === "tornado-emergency") return number ? `Tornado Emergency #${number}` : "Tornado Emergency";
   return number ? `${p.event} #${number}` : (p.event || "Weather Alert");
 }
 
@@ -706,10 +818,7 @@ function getAlertNumber(p){
   for(const vtec of vtecList){
     const parts = String(vtec).split(".");
     const raw = parts[6];
-
-    if(raw && /^\d+$/.test(raw)){
-      return String(Number(raw));
-    }
+    if(raw && /^\d+$/.test(raw)) return String(Number(raw));
   }
 
   const headline = p.headline || "";
@@ -728,61 +837,31 @@ function buildAlertDetail(alert){
 
   if(alert.geometry){
     stations.forEach(station => {
-      const pt = turf.point([station.lng, station.lat]);
-      if(turf.booleanPointInPolygon(pt, alert)){
-        affectedStations.push(station);
-      }
+      if(turf.booleanPointInPolygon(turf.point([station.lng, station.lat]), alert)) affectedStations.push(station);
     });
 
     towns.forEach(town => {
-      const pt = turf.point([town.lng, town.lat]);
-      if(turf.booleanPointInPolygon(pt, alert)){
-        affectedTowns.push(town);
-      }
+      if(turf.booleanPointInPolygon(turf.point([town.lng, town.lat]), alert)) affectedTowns.push(town);
     });
 
     areasOfInterest.forEach(poi => {
-      const pt = turf.point([poi.lng, poi.lat]);
-      if(turf.booleanPointInPolygon(pt, alert)){
-        affectedPOI.push(poi);
-      }
+      if(turf.booleanPointInPolygon(turf.point([poi.lng, poi.lat]), alert)) affectedPOI.push(poi);
     });
   }else{
     const area = p.areaDesc || "";
 
     stations.forEach(station => {
-      if(areaLooksRelevantToStation(area, station)){
-        affectedStations.push(station);
-      }
+      if(areaLooksRelevantToStation(area, station)) affectedStations.push(station);
     });
 
     towns.forEach(town => {
-      if(areaLooksRelevantToTown(area, town)){
-        affectedTowns.push(town);
-      }
+      if(areaLooksRelevantToTown(area, town)) affectedTowns.push(town);
     });
 
     areasOfInterest.forEach(poi => {
-      if(areaLooksRelevantToPOI(area, poi)){
-        affectedPOI.push(poi);
-      }
+      if(areaLooksRelevantToPOI(area, poi)) affectedPOI.push(poi);
     });
   }
-
-  const stationsWithTimes = affectedStations.map(station => ({
-    ...station,
-    impact: estimateImpactTime(alert, station, motion)
-  }));
-
-  const townsWithTimes = affectedTowns.map(town => ({
-    ...town,
-    impact: estimateImpactTime(alert, town, motion)
-  }));
-
-  const poiWithTimes = affectedPOI.map(poi => ({
-    ...poi,
-    impact: estimateImpactTime(alert, poi, motion)
-  }));
 
   return {
     id:alert.id,
@@ -792,9 +871,9 @@ function buildAlertDetail(alert){
     expires:p.expires,
     areaDesc:p.areaDesc || "",
     motion,
-    affectedStations:stationsWithTimes,
-    affectedTowns:townsWithTimes,
-    affectedPOI:poiWithTimes,
+    affectedStations:affectedStations.map(s => ({...s, impact:estimateImpactTime(alert, s, motion)})),
+    affectedTowns:affectedTowns.map(t => ({...t, impact:estimateImpactTime(alert, t, motion)})),
+    affectedPOI:affectedPOI.map(poi => ({...poi, impact:estimateImpactTime(alert, poi, motion)})),
     description:p.description || "",
     instruction:p.instruction || ""
   };
@@ -813,14 +892,9 @@ function formatAffectedStations(stationsHit){
 function areaLooksRelevantToStation(area, station){
   const a = area.toLowerCase();
   return station.zone.some(z => {
-    if(z === "little-rock") return a.includes("pulaski");
-    if(z === "nlr") return a.includes("pulaski");
-    if(z === "maumelle") return a.includes("pulaski");
-    if(z === "sherwood") return a.includes("pulaski");
-    if(z === "cabot") return a.includes("lonoke");
-    if(z === "lonoke") return a.includes("lonoke");
-    if(z === "sheridan") return a.includes("grant");
-    if(z === "grant") return a.includes("grant");
+    if(["little-rock","nlr","maumelle","sherwood"].includes(z)) return a.includes("pulaski");
+    if(["cabot","lonoke"].includes(z)) return a.includes("lonoke");
+    if(["sheridan","grant"].includes(z)) return a.includes("grant");
     return false;
   });
 }
@@ -828,14 +902,9 @@ function areaLooksRelevantToStation(area, station){
 function areaLooksRelevantToTown(area, town){
   const a = area.toLowerCase();
   return town.zone.some(z => {
-    if(z === "little-rock") return a.includes("pulaski");
-    if(z === "nlr") return a.includes("pulaski");
-    if(z === "maumelle") return a.includes("pulaski");
-    if(z === "sherwood") return a.includes("pulaski");
-    if(z === "cabot") return a.includes("lonoke");
-    if(z === "lonoke") return a.includes("lonoke");
-    if(z === "sheridan") return a.includes("grant");
-    if(z === "grant") return a.includes("grant");
+    if(["little-rock","nlr","maumelle","sherwood"].includes(z)) return a.includes("pulaski");
+    if(["cabot","lonoke"].includes(z)) return a.includes("lonoke");
+    if(["sheridan","grant"].includes(z)) return a.includes("grant");
     return false;
   });
 }
@@ -859,31 +928,21 @@ function areaLooksRelevantToPOI(area, poi){
 function parseStormMotion(p){
   const text = `${p.description || ""} ${p.instruction || ""}`;
   const match = text.match(/moving\s+([A-Z]+)\s+at\s+(\d+)\s+mph/i);
-
   if(!match) return null;
-
-  return {
-    direction:match[1].toUpperCase(),
-    speed:Number(match[2])
-  };
+  return { direction:match[1].toUpperCase(), speed:Number(match[2]) };
 }
 
 function estimateImpactTime(alert, point, motion){
-  if(!alert.geometry || !motion || !motion.speed){
-    return "Timing not available";
-  }
+  if(!alert.geometry || !motion || !motion.speed) return "Timing not available";
 
   try{
-    const centroid = turf.centroid(alert);
-    const target = turf.point([point.lng, point.lat]);
-    const miles = turf.distance(centroid, target, { units:"miles" });
+    const miles = turf.distance(turf.centroid(alert), turf.point([point.lng, point.lat]), { units:"miles" });
     const minutes = Math.round((miles / motion.speed) * 60);
 
     if(minutes <= 0) return "Now";
     if(minutes > 180) return "3+ hr";
 
-    const impact = new Date(Date.now() + minutes * 60000);
-    return `~${minutes} min / ${formatTime24(impact.toISOString())}`;
+    return `~${minutes} min / ${formatTime24(new Date(Date.now() + minutes * 60000).toISOString())}`;
   }catch(e){
     return "Timing not available";
   }
@@ -897,8 +956,7 @@ function applyZoneStatus(stationsHit, townsHit, severity){
 
   affectedZones.forEach(zoneName => {
     const el = document.querySelector(`[data-zone="${zoneName}"]`);
-    if(!el) return;
-    setZoneSeverity(el, severity);
+    if(el) setZoneSeverity(el, severity);
   });
 }
 
@@ -913,10 +971,7 @@ function setZoneSeverity(el, severity){
   };
 
   const current = Array.from(el.classList).find(c => rank[c] !== undefined) || "normal";
-
-  if(rank[severity] >= rank[current]){
-    el.className = `zone ${severity}`;
-  }
+  if(rank[severity] >= rank[current]) el.className = `zone ${severity}`;
 }
 
 function highlightImpactedStations(stationsHit){
@@ -938,8 +993,7 @@ function resetZones(){
 
 function openDetailById(id){
   const alert = latestPanelAlerts.find(a => a.id === id);
-  if(!alert) return;
-  openDetail(buildAlertDetail(alert));
+  if(alert) openDetail(buildAlertDetail(alert));
 }
 
 function openDetail(detail){
@@ -960,8 +1014,8 @@ function openDetail(detail){
     : "<li>No tracked towns currently inside this alert area.</li>";
 
   const poiItems = detail.affectedPOI.length
-  ? detail.affectedPOI.map(p => `<li>${p.name} — <strong>${p.impact}</strong></li>`).join("")
-  : "<li>No areas of interest currently inside this alert area.</li>";
+    ? detail.affectedPOI.map(p => `<li>${p.name} — <strong>${p.impact}</strong></li>`).join("")
+    : "<li>No areas of interest currently inside this alert area.</li>";
 
   document.getElementById("detailBody").innerHTML = `
     <div class="detail-section">
@@ -1025,6 +1079,32 @@ function slug(value){
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 }
 
+function cToF(c){
+  if(c === null || c === undefined) return "--";
+  return Math.round((c * 9 / 5) + 32);
+}
+
+function msToMph(ms){
+  if(ms === null || ms === undefined) return "--";
+  return Math.round(ms * 2.23694);
+}
+
+function mmToIn(mm){
+  if(mm === null || mm === undefined) return "--";
+  return (mm / 25.4).toFixed(2);
+}
+
+function safeRound(value){
+  if(value === null || value === undefined) return "--";
+  return Math.round(value);
+}
+
+function degToCompass(deg){
+  if(deg === null || deg === undefined) return "--";
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
 function updateRefreshCountdown(){
   secondsUntilRefresh--;
 
@@ -1037,8 +1117,9 @@ function updateRefreshCountdown(){
 }
 
 loadAlerts();
-setInterval(updateRefreshCountdown, 1000);
 loadTempestConditions();
+
+setInterval(updateRefreshCountdown, 1000);
 setInterval(loadTempestConditions, 60000);
 </script>
 
