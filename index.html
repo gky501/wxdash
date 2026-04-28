@@ -101,41 +101,106 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
   maxZoom: 20
 }).addTo(map);
 
-const stations = [
-  { name: "Station 1", lat: 34.743, lng: -92.284 },
-  { name: "Cabot", lat: 34.973, lng: -92.017 },
-  { name: "Sheridan", lat: 34.317, lng: -92.395 }
-];
+const alertLayer = L.geoJSON(null, {
+  style: feature => {
+    const event = feature.properties.event;
 
-stations.forEach(s => {
-  L.circleMarker([s.lat, s.lng], {
-    radius: 6,
-    color: "#fff",
-    fillColor: "#005bea",
-    fillOpacity: 1
-  }).bindPopup(s.name).addTo(map);
-});
+    if (event === "Tornado Warning") {
+      return { color: "#ff0000", weight: 3, fillOpacity: 0.35 };
+    }
+
+    if (event === "Tornado Watch") {
+      return { color: "#b42318", weight: 2, fillOpacity: 0.2 };
+    }
+
+    if (event === "Severe Thunderstorm Watch") {
+      return { color: "#f47b26", weight: 2, fillOpacity: 0.2 };
+    }
+
+    return { color: "#999", weight: 1, fillOpacity: 0.1 };
+  }
+}).addTo(map);
 
 async function loadAlerts() {
-  const res = await fetch("https://api.weather.gov/alerts/active/area/AR");
-  const data = await res.json();
+  const container = document.getElementById("alerts");
 
-const targetAlerts = data.features.filter(alert => {
-  const event = alert.properties.event;
+  container.innerHTML = "";
+  alertLayer.clearLayers();
 
-  return (
-    event === "Tornado Watch" ||
-    event === "Severe Thunderstorm Watch" ||
-    event === "Tornado Warning"
-  );
-});
-  const arkansasAlerts = targetAlerts.filter(alert => {
-  return alert.properties.areaDesc.includes("AR");
-});
+  try {
+    const res = await fetch("https://api.weather.gov/alerts/active/area/AR");
+    const data = await res.json();
+
+    const targetAlerts = data.features.filter(alert => {
+      const event = alert.properties.event;
+
+      return (
+        event === "Tornado Watch" ||
+        event === "Severe Thunderstorm Watch" ||
+        event === "Tornado Warning"
+      );
+    });
+
+    if (!targetAlerts.length) {
+      container.innerHTML = `
+        <div class="alert-box">
+          <div class="alert-title">No active severe alerts</div>
+          <div>No Tornado Watches, Severe Thunderstorm Watches, or Tornado Warnings for Arkansas.</div>
+        </div>
+      `;
+      return;
+    }
+
+    targetAlerts.forEach(alert => {
+      const event = alert.properties.event;
+
+      if (alert.geometry) {
+        alertLayer.addData(alert);
+      }
+
+      container.innerHTML += `
+        <div class="alert-box">
+          <div class="alert-title">${event}</div>
+          <div>${formatAreas(alert.properties.areaDesc)}</div>
+        </div>
+      `;
+    });
+
+    if (alertLayer.getLayers().length) {
+      map.fitBounds(alertLayer.getBounds(), {
+        padding: [25, 25]
+      });
+    }
+
+  } catch (error) {
+    console.error(error);
+
+    container.innerHTML = `
+      <div class="alert-box">
+        <div class="alert-title">Unable to load alerts</div>
+        <div>NWS alert data could not be loaded.</div>
+      </div>
+    `;
+  }
+}
+
+function formatAreas(areaDesc) {
+  if (!areaDesc) return "No area listed.";
+
+  const areas = areaDesc
+    .split(";")
+    .map(area => area.trim())
+    .filter(Boolean);
+
+  if (areas.length <= 10) {
+    return areas.join(", ");
+  }
+
+  return areas.slice(0, 10).join(", ") + `, +${areas.length - 10} more`;
+}
 
 loadAlerts();
 setInterval(loadAlerts, 60000);
 </script>
-
 </body>
 </html>
