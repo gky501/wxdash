@@ -26,13 +26,29 @@ body{
 
 header{
   background:#000;
-  padding:14px 20px;
+  padding:12px 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+}
+
+.header-title{
   font-size:26px;
   font-weight:900;
   letter-spacing:2px;
 }
 
-.top-bar{display:flex;}
+.header-info{
+  text-align:right;
+  font-size:13px;
+  line-height:1.35;
+  color:#e5e7eb;
+}
+
+.top-bar{
+  display:flex;
+}
 
 .zone{
   flex:1;
@@ -57,10 +73,13 @@ header{
 .layout{
   display:grid;
   grid-template-columns:70% 30%;
-  height:calc(100vh - 110px);
+  height:calc(100vh - 114px);
 }
 
-#map{height:100%; background:#111;}
+#map{
+  height:100%;
+  background:#111;
+}
 
 .panel{
   background:var(--panel);
@@ -102,9 +121,18 @@ header{
 
 .station-hit{
   margin-top:8px;
-  font-weight:700;
   font-size:13px;
-  line-height:1.35;
+  line-height:1.45;
+}
+
+.station-hit-title{
+  font-weight:900;
+  margin-bottom:4px;
+}
+
+.station-list-line{
+  display:block;
+  font-weight:700;
 }
 
 .station-marker{
@@ -120,6 +148,15 @@ header{
   background:#fff;
   border-color:#ff0000;
   box-shadow:0 0 18px #ff0000;
+}
+
+.poi-marker{
+  background:#111;
+  border:2px solid #facc15;
+  border-radius:50%;
+  width:11px;
+  height:11px;
+  box-shadow:0 0 10px rgba(250,204,21,.75);
 }
 
 #detailOverlay{
@@ -178,7 +215,9 @@ header{
   line-height:1.6;
 }
 
-.leaflet-container{font-family:Arial, Helvetica, sans-serif;}
+.leaflet-container{
+  font-family:Arial, Helvetica, sans-serif;
+}
 
 @keyframes pulseEmergency{
   0%{box-shadow:0 0 0 rgba(255,0,0,0);}
@@ -190,7 +229,13 @@ header{
 
 <body>
 
-<header>MEMS WEATHER CENTER</header>
+<header>
+  <div class="header-title">MEMS WEATHER CENTER</div>
+  <div class="header-info">
+    <div>Information Time: <strong id="infoTime">--:--</strong></div>
+    <div>Next Refresh: <strong id="refreshCountdown">60s</strong></div>
+  </div>
+</header>
 
 <div class="top-bar">
   <div class="zone normal" data-zone="little-rock">LITTLE ROCK</div>
@@ -227,20 +272,34 @@ header{
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
 <script>
+const REFRESH_SECONDS = 60;
+const USER_ACTIVITY_HOLD_MS = 5 * 60 * 1000;
+
+let secondsUntilRefresh = REFRESH_SECONDS;
+let lastUserMapActivity = 0;
+let latestPanelAlerts = [];
+
 const AR_BOUNDS = L.latLngBounds(
   [33.00, -94.75],
   [36.65, -89.55]
 );
 
+const AR_CENTER = [34.75, -92.25];
+const AR_ZOOM = 7;
+
 const map = L.map("map", {
   maxBounds: AR_BOUNDS.pad(0.08),
   maxBoundsViscosity: 1.0
-}).fitBounds(AR_BOUNDS);
+}).setView(AR_CENTER, AR_ZOOM);
 
 L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
   maxZoom:20,
   attribution:"© OpenStreetMap © CARTO"
 }).addTo(map);
+
+map.on("mousemove dragstart zoomstart movestart", function(){
+  lastUserMapActivity = Date.now();
+});
 
 const stations = [
   { name:"Station 1", area:"Little Rock", zone:["little-rock"], lat:34.7433819, lng:-92.2843613 },
@@ -257,6 +316,33 @@ const stations = [
   { name:"Arch St Station", area:"South Pulaski / Grant County", zone:["sheridan","grant"], lat:34.6174833, lng:-92.3157304 }
 ];
 
+const areasOfInterest = [
+  { name:"Greystone", area:"Cabot", lat:35.02923764117509, lng:-92.05865556970093, radius:"2 miles" },
+  { name:"Clinton Nat. Airport", area:"Little Rock", lat:34.7284011058131, lng:-92.22039216234353, radius:"1 mile" },
+  { name:"Wrightsville Correctional Unit", area:"Wrightsville", lat:34.60194061960711, lng:-92.19260013773142, radius:".25 miles" },
+  { name:"LR Air Force Base", area:"Jacksonville", lat:34.90639838445616, lng:-92.14395233018587, radius:"1 mile" },
+  { name:"LR Veterans Hospital", area:"Little Rock", lat:34.746267149080055, lng:-92.32047667930003, radius:"1 mile" },
+  { name:"UAMS", area:"Little Rock", lat:34.74744666257331, lng:-92.32088969840527, radius:"1 mile" },
+  { name:"St. Vincent Infirmary", area:"Little Rock", lat:34.75033284961561, lng:-92.33940377918991, radius:"1 mile" },
+  { name:"Baptist Med Center LR", area:"Little Rock", lat:34.74480435362505, lng:-92.38089211015347, radius:"1 mile" },
+  { name:"Arkansas Heart Hospital", area:"Little Rock", lat:34.73922859302091, lng:-92.39358428834757, radius:"1 mile" },
+  { name:"Arkansas Childrens", area:"Little Rock", lat:34.74198874170889, lng:-92.29300715213085, radius:"1 mile" },
+  { name:"Saline Memorial", area:"Benton", lat:34.57494971990144, lng:-92.59375497712537, radius:"1 mile" },
+  { name:"Baptist Springhill", area:"North Little Rock", lat:34.78394874277726, lng:-92.22312924338553, radius:"1 mile" },
+  { name:"SVI North", area:"Sherwood", lat:34.81344283040206, lng:-92.20907267741393, radius:"1 mile" },
+  { name:"Unity Jacksonville", area:"Jacksonville", lat:34.87316535170868, lng:-92.12534698787888, radius:"1 mile" },
+  { name:"Cabot Emergency Hospital", area:"Cabot", lat:34.98186175242931, lng:-92.03483579161522, radius:"1 mile" },
+  { name:"Unity Searcy", area:"Searcy", lat:35.2519019242663, lng:-91.69724613374575, radius:"1 mile" },
+  { name:"Baptist Hot Spring County", area:"Malvern", lat:34.358715333160184, lng:-92.78587668356282, radius:"1 mile" },
+  { name:"Jefferson Regional", area:"Pine Bluff", lat:34.18816847629358, lng:-92.01757292761346, radius:"1 mile" },
+  { name:"Camp Robinson Gate", area:"North Little Rock", lat:34.814341913579206, lng:-92.29026940852049, radius:"1 mile" },
+  { name:"Camp Robinson Air Field", area:"North Little Rock", lat:34.843067898247455, lng:-92.30758595632308, radius:"1 mile" },
+  { name:"NLR Airport", area:"North Little Rock", lat:34.83274690489968, lng:-92.25665331558987, radius:".5 miles" },
+  { name:"Conway Regional Medical Center", area:"Conway", lat:35.0855885850444, lng:-92.45778239317336, radius:"1 mile" },
+  { name:"Baptist Conway", area:"Conway", lat:35.0561499713529, lng:-92.41939841750165, radius:"1 mile" },
+  { name:"Pinnacle MTN", area:"Little Rock", lat:34.84164634982719, lng:-92.48591891234585, radius:".5 miles" }
+];
+
 const towns = [
   { name:"Little Rock", zone:["little-rock"], lat:34.7465, lng:-92.2896 },
   { name:"North Little Rock", zone:["nlr"], lat:34.7695, lng:-92.2671 },
@@ -268,6 +354,7 @@ const towns = [
 ];
 
 const stationLayer = L.layerGroup().addTo(map);
+const poiLayer = L.layerGroup().addTo(map);
 
 const warningLayer = L.geoJSON(null, {
   style:function(feature){
@@ -303,7 +390,27 @@ stations.forEach(station => {
     .addTo(stationLayer);
 });
 
-let latestPanelAlerts = [];
+areasOfInterest.forEach(poi => {
+  const icon = L.divIcon({
+    className:"",
+    html:`<div class="poi-marker"></div>`,
+    iconSize:[15,15],
+    iconAnchor:[7,7]
+  });
+
+  L.marker([poi.lat, poi.lng], { icon })
+    .bindPopup(`<strong>${poi.name}</strong><br>${poi.area}<br>Watch radius: ${poi.radius}`)
+    .addTo(poiLayer);
+});
+
+L.control.layers(null, {
+  "Stations": stationLayer,
+  "Areas of Interest": poiLayer,
+  "Warning Polygons": warningLayer
+}, {
+  collapsed:false,
+  position:"topleft"
+}).addTo(map);
 
 async function loadAlerts(){
   const container = document.getElementById("alerts");
@@ -324,6 +431,8 @@ async function loadAlerts(){
     }
 
     const data = await res.json();
+
+    document.getElementById("infoTime").textContent = formatTime24(new Date().toISOString());
 
     const allArkansasAlerts = data.features
       .filter(isArkansasRelevantAlert)
@@ -368,18 +477,14 @@ async function loadAlerts(){
             <strong>Areas:</strong> ${formatAreas(p.areaDesc)}
           </div>
           <div class="station-hit">
-            <strong>Affected stations:</strong><br>
-            ${detail.affectedStations.length ? detail.affectedStations.map(s => s.name).join(", ") : "No MEMS stations currently inside this alert area."}
+            <div class="station-hit-title">Affected Stations</div>
+            ${formatAffectedStations(detail.affectedStations)}
           </div>
         </div>
       `);
     });
 
-    if(warningLayer.getLayers().length){
-      map.fitBounds(warningLayer.getBounds(), { padding:[25,25] });
-    }else{
-      map.fitBounds(AR_BOUNDS);
-    }
+    maintainMapViewAfterRefresh();
 
   }catch(err){
     console.error(err);
@@ -390,6 +495,16 @@ async function loadAlerts(){
       </div>
     `;
   }
+}
+
+function maintainMapViewAfterRefresh(){
+  const userRecentlyActive = Date.now() - lastUserMapActivity < USER_ACTIVITY_HOLD_MS;
+
+  if(userRecentlyActive){
+    return;
+  }
+
+  map.setView(AR_CENTER, AR_ZOOM, { animate:false });
 }
 
 function isArkansasRelevantAlert(alert){
@@ -507,6 +622,7 @@ function buildAlertDetail(alert){
   const motion = parseStormMotion(p);
   const affectedStations = [];
   const affectedTowns = [];
+  const affectedPOI = [];
 
   if(alert.geometry){
     stations.forEach(station => {
@@ -522,16 +638,31 @@ function buildAlertDetail(alert){
         affectedTowns.push(town);
       }
     });
+
+    areasOfInterest.forEach(poi => {
+      const pt = turf.point([poi.lng, poi.lat]);
+      if(turf.booleanPointInPolygon(pt, alert)){
+        affectedPOI.push(poi);
+      }
+    });
   }else{
     const area = p.areaDesc || "";
+
     stations.forEach(station => {
       if(areaLooksRelevantToStation(area, station)){
         affectedStations.push(station);
       }
     });
+
     towns.forEach(town => {
       if(areaLooksRelevantToTown(area, town)){
         affectedTowns.push(town);
+      }
+    });
+
+    areasOfInterest.forEach(poi => {
+      if(areaLooksRelevantToPOI(area, poi)){
+        affectedPOI.push(poi);
       }
     });
   }
@@ -546,6 +677,11 @@ function buildAlertDetail(alert){
     impact: estimateImpactTime(alert, town, motion)
   }));
 
+  const poiWithTimes = affectedPOI.map(poi => ({
+    ...poi,
+    impact: estimateImpactTime(alert, poi, motion)
+  }));
+
   return {
     id:alert.id,
     title:formatTitle(p),
@@ -556,9 +692,20 @@ function buildAlertDetail(alert){
     motion,
     affectedStations:stationsWithTimes,
     affectedTowns:townsWithTimes,
+    affectedPOI:poiWithTimes,
     description:p.description || "",
     instruction:p.instruction || ""
   };
+}
+
+function formatAffectedStations(stationsHit){
+  if(!stationsHit.length){
+    return `<span class="station-list-line">No MEMS stations currently inside this alert area.</span>`;
+  }
+
+  return stationsHit
+    .map(s => `<span class="station-list-line">${s.name} — ${s.impact}</span>`)
+    .join("");
 }
 
 function areaLooksRelevantToStation(area, station){
@@ -589,6 +736,22 @@ function areaLooksRelevantToTown(area, town){
     if(z === "grant") return a.includes("grant");
     return false;
   });
+}
+
+function areaLooksRelevantToPOI(area, poi){
+  const a = area.toLowerCase();
+  const p = `${poi.name} ${poi.area}`.toLowerCase();
+
+  if(p.includes("cabot")) return a.includes("lonoke");
+  if(p.includes("lonoke")) return a.includes("lonoke");
+  if(p.includes("sheridan") || p.includes("grant")) return a.includes("grant");
+  if(p.includes("benton") || p.includes("saline")) return a.includes("saline");
+  if(p.includes("conway")) return a.includes("faulkner");
+  if(p.includes("searcy")) return a.includes("white");
+  if(p.includes("malvern")) return a.includes("hot spring");
+  if(p.includes("pine bluff")) return a.includes("jefferson");
+
+  return a.includes("pulaski");
 }
 
 function parseStormMotion(p){
@@ -687,12 +850,16 @@ function openDetail(detail){
   `;
 
   const stationItems = detail.affectedStations.length
-    ? detail.affectedStations.map(s => `<li>${s.name} — ${s.area} — <strong>${s.impact}</strong></li>`).join("")
+    ? detail.affectedStations.map(s => `<li>${s.name} — <strong>${s.impact}</strong></li>`).join("")
     : "<li>No MEMS stations currently inside this alert area.</li>";
 
   const townItems = detail.affectedTowns.length
     ? detail.affectedTowns.map(t => `<li>${t.name} — <strong>${t.impact}</strong></li>`).join("")
     : "<li>No tracked towns currently inside this alert area.</li>";
+
+  const poiItems = detail.affectedPOI.length
+    ? detail.affectedPOI.map(p => `<li>${p.name} — ${p.area} — <strong>${p.impact}</strong></li>`).join("")
+    : "<li>No areas of interest currently inside this alert area.</li>";
 
   document.getElementById("detailBody").innerHTML = `
     <div class="detail-section">
@@ -703,6 +870,11 @@ function openDetail(detail){
     <div class="detail-section">
       <strong>Affected Towns</strong>
       <ul class="detail-list">${townItems}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Areas of Interest</strong>
+      <ul class="detail-list">${poiItems}</ul>
     </div>
 
     <div class="detail-section">
@@ -751,8 +923,19 @@ function slug(value){
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 }
 
+function updateRefreshCountdown(){
+  secondsUntilRefresh--;
+
+  if(secondsUntilRefresh <= 0){
+    secondsUntilRefresh = REFRESH_SECONDS;
+    loadAlerts();
+  }
+
+  document.getElementById("refreshCountdown").textContent = secondsUntilRefresh + "s";
+}
+
 loadAlerts();
-setInterval(loadAlerts, 60000);
+setInterval(updateRefreshCountdown, 1000);
 </script>
 
 </body>
