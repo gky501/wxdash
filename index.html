@@ -209,15 +209,17 @@ if (!alertRes.ok) {
       return feature.properties.STATE === "05";
     });
 
-    const targetAlerts = alertData.features.filter(alert => {
-      const event = alert.properties.event;
+const targetAlerts = alertData.features.filter(alert => {
+  const event = alert.properties.event;
+  const area = alert.properties.areaDesc || "";
 
-      return (
-        event === "Tornado Watch" ||
-        event === "Severe Thunderstorm Watch" ||
-        event === "Tornado Warning"
-      );
-    });
+  return (
+    (event === "Tornado Watch" ||
+     event === "Severe Thunderstorm Watch" ||
+     event === "Tornado Warning") &&
+    area.includes("AR")
+  );
+});
 
     if (!targetAlerts.length) {
       container.innerHTML = `
