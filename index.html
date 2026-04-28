@@ -399,8 +399,8 @@ areasOfInterest.forEach(poi => {
   });
 
   L.marker([poi.lat, poi.lng], { icon })
-    .bindPopup(`<strong>${poi.name}</strong><br>${poi.area}<br>Watch radius: ${poi.radius}`)
-    .addTo(poiLayer);
+  .bindPopup(`<strong>${poi.name}</strong><br>Watch radius: ${poi.radius}`)
+  .addTo(poiLayer);
 });
 
 L.control.layers(null, {
@@ -858,8 +858,8 @@ function openDetail(detail){
     : "<li>No tracked towns currently inside this alert area.</li>";
 
   const poiItems = detail.affectedPOI.length
-    ? detail.affectedPOI.map(p => `<li>${p.name} — ${p.area} — <strong>${p.impact}</strong></li>`).join("")
-    : "<li>No areas of interest currently inside this alert area.</li>";
+  ? detail.affectedPOI.map(p => `<li>${p.name} — <strong>${p.impact}</strong></li>`).join("")
+  : "<li>No areas of interest currently inside this alert area.</li>";
 
   document.getElementById("detailBody").innerHTML = `
     <div class="detail-section">
