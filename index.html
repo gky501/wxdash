@@ -107,14 +107,22 @@ async function loadAlerts() {
     });
     const data = await res.json();
 
-    const alerts = data.features.filter(a => {
-      const event = a.properties.event;
-      return (
-        event === "Tornado Warning" ||
-        event === "Tornado Watch" ||
-        event === "Severe Thunderstorm Watch"
-      );
-    });
+const alerts = data.features.filter(a => {
+  const event = a.properties.event;
+  const area = a.properties.areaDesc || "";
+
+  const isRelevant =
+    area.includes("AR") ||
+    area.includes("OK") ||
+    area.includes("TX");
+
+  return (
+    (event === "Tornado Warning" ||
+     event === "Tornado Watch" ||
+     event === "Severe Thunderstorm Watch") &&
+    isRelevant
+  );
+}););
 
     if (alerts.length === 0) {
       container.innerHTML = `<div class="alert-box" style="background:#1e3a1e">No active alerts for this area.</div>`;
