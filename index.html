@@ -112,9 +112,7 @@ const alerts = data.features.filter(a => {
   const area = a.properties.areaDesc || "";
 
   const isRelevant =
-    area.includes("AR") ||
-    area.includes("OK") ||
-    area.includes("TX");
+    area.includes("AR");
 
   return (
     (event === "Tornado Warning" ||
