@@ -244,6 +244,24 @@ header{
   background:linear-gradient(90deg,#000,#111);
   border-top:2px solid #f47b26;
 }
+  .bottom-bar{
+  width:100%;
+  background:linear-gradient(90deg,#000,#111);
+  border-top:2px solid #f47b26;
+  padding:10px 16px;
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:.06em;
+  color:#e5e7eb;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  box-sizing:border-box;
+}
+
+.bottom-label{
+  color:#f47b26;
+}
 </style>
 </head>
 
@@ -275,7 +293,9 @@ header{
   </div>
 </div>
 <div class="bottom-bar" id="bottomBar">
-  CURRENT CONDITIONS — LOADING...
+  <span class="bottom-label">CURRENT CONDITIONS</span>
+  <span id="tempestStatus">Loading Tempest...</span>
+  
 </div>
 
 <div id="detailOverlay">
@@ -295,6 +315,8 @@ header{
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
 <script>
+const TEMPEST_STATION_ID = "136293";
+const TEMPEST_TOKEN = "a394fe76-fe00-4227-836b-f574a15ce385";
 const REFRESH_SECONDS = 60;
 const USER_ACTIVITY_HOLD_MS = 5 * 60 * 1000;
 
@@ -434,7 +456,64 @@ L.control.layers(null, {
   collapsed:false,
   position:"topleft"
 }).addTo(map);
+async function loadTempestConditions(){
+  const el = document.getElementById("tempestStatus");
 
+  if(!TEMPEST_STATION_ID || TEMPEST_STATION_ID === "YOUR_STATION_ID"){
+    el.textContent = "Tempest not configured";
+    return;
+  }
+
+  try{
+    const url = `https://swd.weatherflow.com/swd/rest/observations/station/${TEMPEST_STATION_ID}?token=${TEMPEST_TOKEN}`;
+    const res = await fetch(url);
+
+    if(!res.ok){
+      throw new Error("Tempest API failed: " + res.status);
+    }
+
+    const data = await res.json();
+
+    const obs = data.obs && data.obs[0];
+
+    if(!obs){
+      throw new Error("No Tempest observation returned");
+    }
+
+    const airTempF = cToF(obs.air_temperature);
+    const windMph = msToMph(obs.wind_avg);
+    const gustMph = msToMph(obs.wind_gust);
+    const rainIn = mmToIn(obs.precip_accum_local_day);
+    const lightningDistance = obs.lightning_strike_last_distance;
+    const lightningTime = obs.lightning_strike_last_epoch;
+
+    const lightningText = lightningTime
+      ? `${lightningDistance} mi`
+      : "None recent";
+
+    el.textContent =
+      `TEMP ${airTempF}°F  /  RAIN ${rainIn}"  /  WIND ${windMph}G${gustMph} MPH  /  LIGHTNING ${lightningText}`;
+
+  }catch(err){
+    console.error("Tempest error:", err);
+    el.textContent = "Tempest unavailable";
+  }
+}
+
+function cToF(c){
+  if(c === null || c === undefined) return "--";
+  return Math.round((c * 9 / 5) + 32);
+}
+
+function msToMph(ms){
+  if(ms === null || ms === undefined) return "--";
+  return Math.round(ms * 2.23694);
+}
+
+function mmToIn(mm){
+  if(mm === null || mm === undefined) return "--";
+  return (mm / 25.4).toFixed(2);
+}
 async function loadAlerts(){
   const container = document.getElementById("alerts");
   container.innerHTML = "";
@@ -959,6 +1038,8 @@ function updateRefreshCountdown(){
 
 loadAlerts();
 setInterval(updateRefreshCountdown, 1000);
+loadTempestConditions();
+setInterval(loadTempestConditions, 60000);
 </script>
 
 </body>
