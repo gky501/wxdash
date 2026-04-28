@@ -289,16 +289,15 @@ const targetAlerts = alertData.features.filter(alert => {
     }
 
   } catch (error) {
-    console.error(error);
+    console.error("Weather dashboard error:", error);
 
     container.innerHTML = `
       <div class="alert-box warning">
         <div class="alert-title">Unable to load alerts</div>
-        <div>NWS alert data could not be loaded.</div>
+        <div>${error.message}</div>
       </div>
     `;
   }
-}
 
 function buildPolygonIndex(geojson) {
   const indexed = [];
