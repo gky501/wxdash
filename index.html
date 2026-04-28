@@ -347,17 +347,20 @@ function resetZones() {
 
 function updateZonesFromStations(affectedStations, event) {
   affectedStations.forEach(station => {
-    const zone = findZoneForStation(station.name);
-    if (!zone) return;
+    const zones = findZonesForStation(station.name);
 
-    zone.classList.remove("normal");
+    zones.forEach(zone => {
+      if (!zone) return;
 
-    if (event === "Tornado Warning") {
-      zone.classList.remove("watch");
-      zone.classList.add("warning");
-    } else if (!zone.classList.contains("warning")) {
-      zone.classList.add("watch");
-    }
+      zone.classList.remove("normal");
+
+      if (event === "Tornado Warning") {
+        zone.classList.remove("watch");
+        zone.classList.add("warning");
+      } else if (!zone.classList.contains("warning")) {
+        zone.classList.add("watch");
+      }
+    });
   });
 }
 
