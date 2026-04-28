@@ -129,6 +129,9 @@ const targetAlerts = data.features.filter(alert => {
     event === "Tornado Warning"
   );
 });
+  const arkansasAlerts = targetAlerts.filter(alert => {
+  return alert.properties.areaDesc.includes("AR");
+});
 
 loadAlerts();
 setInterval(loadAlerts, 60000);
