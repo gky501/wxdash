@@ -1,1 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MEMS Weather Center</title>
 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+  <style>
+    body {
+      margin: 0;
+      background: #0a0a0a;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    header {
+      background: black;
+      padding: 14px 20px;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+
+    .top-bar {
+      display: flex;
+      background: #f47b26;
+    }
+
+    .zone {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      font-weight: 700;
+      border-right: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .zone.normal { background: #2e7d32; }
+    .zone.watch { background: #f47b26; }
+    .zone.warning { background: #b42318; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 70% 30%;
+      height: calc(100vh - 110px);
+    }
+
+    #map {
+      height: 100%;
+    }
+
+    .panel {
+      background: #111;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .alert-box {
+      background: #b42318;
+      padding: 14px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+    }
+
+    .alert-title {
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>MEMS WEATHER CENTER</header>
+
+<div class="top-bar">
+  <div class="zone normal">LITTLE ROCK</div>
+  <div class="zone normal">NLR</div>
+  <div class="zone normal">MAUMELLE</div>
+  <div class="zone normal">SHERWOOD</div>
+  <div class="zone normal">CABOT</div>
+  <div class="zone normal">LONOKE CO</div>
+  <div class="zone normal">SHERIDAN</div>
+  <div class="zone normal">GRANT CO</div>
+</div>
+
+<div class="layout">
+  <div id="map"></div>
+
+  <div class="panel">
+    <div id="alerts"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+const map = L.map("map").setView([34.75, -92.25], 7);
+
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 20
+}).addTo(map);
+
+const stations = [
+  { name: "Station 1", lat: 34.743, lng: -92.284 },
+  { name: "Cabot", lat: 34.973, lng: -92.017 },
+  { name: "Sheridan", lat: 34.317, lng: -92.395 }
+];
+
+stations.forEach(s => {
+  L.circleMarker([s.lat, s.lng], {
+    radius: 6,
+    color: "#fff",
+    fillColor: "#005bea",
+    fillOpacity: 1
+  }).bindPopup(s.name).addTo(map);
+});
+
+async function loadAlerts() {
+  const res = await fetch("https://api.weather.gov/alerts/active/area/AR");
+  const data = await res.json();
+
+  const container = document.getElementById("alerts");
+  container.innerHTML = "";
+
+  data.features.forEach(alert => {
+    const event = alert.properties.event;
+
+    if (
+      event === "Tornado Warning" ||
+      event === "Tornado Watch" ||
+      event === "Severe Thunderstorm Watch"
+    ) {
+      container.innerHTML += `
+        <div class="alert-box">
+          <div class="alert-title">${event}</div>
+          ${alert.properties.areaDesc}
+        </div>
+      `;
+    }
+  });
+}
+
+loadAlerts();
+setInterval(loadAlerts, 60000);
+</script>
+
+</body>
+</html>
