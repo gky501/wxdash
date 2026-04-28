@@ -361,17 +361,58 @@ function updateZonesFromStations(affectedStations, event) {
   });
 }
 
-function findZoneForStation(name) {
+function findZonesForStation(name) {
   const zones = document.querySelectorAll(".zone");
+  const matched = [];
 
-  if (name.includes("Cabot")) return zones[4];
-  if (name.includes("Lonoke")) return zones[5];
-  if (name.includes("Sheridan") || name.includes("Arch St")) return zones[6];
-  if (name.includes("Maumelle")) return zones[2];
-  if (name.includes("Sherwood") || name.includes("Gravel Ridge") || name.includes("North Pulaski")) return zones[3];
-  if (name.includes("Station 1") || name.includes("Station 3") || name.includes("Station 4") || name.includes("Station 10") || name.includes("MEMS North")) return zones[0];
+  if (
+    name.includes("Station 1") ||
+    name.includes("Station 3") ||
+    name.includes("Station 4") ||
+    name.includes("Station 10") ||
+    name.includes("MEMS North")
+  ) {
+    matched.push(zones[0]); // Little Rock
+  }
 
-  return null;
+  if (
+    name.includes("MEMS North") ||
+    name.includes("Station 4") ||
+    name.includes("Gravel Ridge") ||
+    name.includes("North Pulaski")
+  ) {
+    matched.push(zones[1]); // NLR
+  }
+
+  if (name.includes("Maumelle")) {
+    matched.push(zones[2]);
+  }
+
+  if (
+    name.includes("Sherwood") ||
+    name.includes("Gravel Ridge") ||
+    name.includes("North Pulaski")
+  ) {
+    matched.push(zones[3]);
+  }
+
+  if (name.includes("Cabot")) {
+    matched.push(zones[4]);
+  }
+
+  if (name.includes("Cabot")) {
+    matched.push(zones[5]); // Lonoke Co
+  }
+
+  if (
+    name.includes("Sheridan") ||
+    name.includes("Arch St")
+  ) {
+    matched.push(zones[6]); // Sheridan
+    matched.push(zones[7]); // Grant Co
+  }
+
+  return matched;
 }
 
 function formatAreas(areaDesc) {
