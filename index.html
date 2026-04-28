@@ -191,14 +191,18 @@ async function loadAlerts() {
   resetZones();
 
   try {
-const [alertRes, countyRes] = await Promise.all([
-  fetch("https://api.weather.gov/alerts/active/area/AR", {
-    headers: {
-      "Accept": "application/geo+json"
-    }
-  }),
-  fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json")
-]);
+    // ALL your fetch + processing code here
+  } catch (error) {
+    console.error("Weather dashboard error:", error);
+
+    container.innerHTML = `
+      <div class="alert-box warning">
+        <div class="alert-title">Unable to load alerts</div>
+        <div>${error.message}</div>
+      </div>
+    `;
+  }
+}
 if (!alertRes.ok) {
   throw new Error(`NWS API failed: ${alertRes.status}`);
 }
