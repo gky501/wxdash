@@ -121,33 +121,82 @@ stations.forEach(s=>{
 
 async function loadAlerts(){
   const container=document.getElementById("alerts");
+
   container.innerHTML="";
   watchLayer.clearLayers();
   warningLayer.clearLayers();
   resetZones();
 
   try{
-    const res=await fetch("https://api.weather.gov/alerts/active",{headers:{"Accept":"application/geo+json"}});
+    const res=await fetch("https://api.weather.gov/alerts/active",{
+      headers:{"Accept":"application/geo+json"}
+    });
+
     const data=await res.json();
 
     const alerts=data.features.filter(a=>{
-      const e=a.properties.event;
-      return e==="Tornado Warning"||e==="Tornado Watch"||e==="Severe Thunderstorm Watch";
+      const event=a.properties.event;
+      return (
+        event==="Tornado Warning" ||
+        event==="Tornado Watch" ||
+        event==="Severe Thunderstorm Watch"
+      );
     });
 
     alerts.forEach(alert=>{
       const p=alert.properties;
       const event=p.event;
+      const areaDesc=p.areaDesc || "";
 
+      // ONLY draw tornado warning polygons
       if(event==="Tornado Warning" && alert.geometry){
         warningLayer.addData(alert);
       }
 
-      const impacted=stations.filter(st=>{
-        if(!alert.geometry) return false;
-        const pt=turf.point([st.lng,st.lat]);
-        return turf.booleanPointInPolygon(pt,alert);
+      // Only run station impact for tornado warnings with polygons
+      let impacted=[];
+
+      if(event==="Tornado Warning" && alert.geometry){
+        impacted=stations.filter(st=>{
+          const pt=turf.point([st.lng,st.lat]);
+          return turf.booleanPointInPolygon(pt,alert);
+        });
+
+        updateZones(impacted,event);
+      }
+
+      // Watches are listed only, not mapped
+      container.innerHTML+=`
+        <div class="alert-box ${event.includes("Warning")?"warning":"watch"}">
+          <div class="alert-title">${event}</div>
+          <div>${formatAreas(areaDesc)}</div>
+          ${
+            event==="Tornado Warning"
+              ? `<div class="station-hit">
+                   ${impacted.length ? impacted.map(s=>s.name).join(", ") : "No stations impacted"}
+                 </div>`
+              : `<div class="station-hit">Watch listed only — polygon hidden</div>`
+          }
+        </div>
+      `;
+    });
+
+    if(warningLayer.getLayers().length){
+      map.fitBounds(warningLayer.getBounds(),{
+        padding:[25,25]
       });
+    }
+
+  }catch(err){
+    console.error(err);
+    container.innerHTML=`
+      <div class="alert-box warning">
+        <div class="alert-title">API failed</div>
+        <div>${err.message}</div>
+      </div>
+    `;
+  }
+}
 
       updateZones(impacted,event);
 
