@@ -224,6 +224,26 @@ header{
   50%{box-shadow:0 0 24px rgba(255,0,255,.85);}
   100%{box-shadow:0 0 0 rgba(255,0,0,0);}
 }
+  .bottom-bar{
+  width:100%;
+  background:#000;
+  border-top:2px solid rgba(255,255,255,.15);
+
+  padding:10px 16px;
+
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:.08em;
+
+  color:#e5e7eb;
+
+  display:flex;
+  align-items:center;
+}
+  .bottom-bar{
+  background:linear-gradient(90deg,#000,#111);
+  border-top:2px solid #f47b26;
+}
 </style>
 </head>
 
@@ -253,6 +273,9 @@ header{
   <div class="panel">
     <div id="alerts"></div>
   </div>
+</div>
+<div class="bottom-bar" id="bottomBar">
+  CURRENT CONDITIONS — LOADING...
 </div>
 
 <div id="detailOverlay">
