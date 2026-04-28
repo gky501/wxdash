@@ -1,100 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>MEMS Weather Center</title>
+<meta charset="UTF-8">
+<title>MEMS Weather Center</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 
-  <style>
-    body {
-      margin: 0;
-      background: #0a0a0a;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
+<style>
+body {
+  margin: 0;
+  background: #0a0a0a;
+  color: white;
+  font-family: Arial, sans-serif;
+}
 
-    header {
-      background: black;
-      padding: 14px 20px;
-      font-size: 26px;
-      font-weight: 900;
-      letter-spacing: 2px;
-    }
+header {
+  background: black;
+  padding: 14px 20px;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
 
-    .top-bar {
-      display: flex;
-      background: #2e7d32;
-    }
+.top-bar {
+  display: flex;
+}
 
-    .zone {
-      flex: 1;
-      text-align: center;
-      padding: 10px;
-      font-weight: 700;
-      border-right: 1px solid rgba(255,255,255,0.3);
-    }
+.zone {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  font-weight: 700;
+}
 
-    .zone.normal { background: #2e7d32; }
-    .zone.watch { background: #f47b26; }
-    .zone.warning { background: #b42318; }
+.zone.normal { background: #2e7d32; }
+.zone.watch { background: #f47b26; }
+.zone.warning { background: #b42318; }
 
-    .layout {
-      display: grid;
-      grid-template-columns: 70% 30%;
-      height: calc(100vh - 110px);
-    }
+.layout {
+  display: grid;
+  grid-template-columns: 70% 30%;
+  height: calc(100vh - 110px);
+}
 
-    #map {
-      height: 100%;
-    }
+#map {
+  height: 100%;
+}
 
-    .panel {
-      background: #111;
-      padding: 16px;
-      overflow-y: auto;
-    }
+.panel {
+  background: #111;
+  padding: 16px;
+  overflow-y: auto;
+}
 
-    .alert-box {
-      background: #b42318;
-      padding: 14px;
-      margin-bottom: 12px;
-      border-radius: 6px;
-      border-left: 5px solid #fff;
-    }
+.alert-box {
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
 
-    .alert-box.watch {
-      background: #c2410c;
-    }
+.alert-box.watch { background: #c2410c; }
+.alert-box.warning { background: #b42318; }
 
-    .alert-box.warning {
-      background: #b42318;
-      animation: pulse 1.6s infinite;
-    }
+.alert-title {
+  font-weight: 900;
+  margin-bottom: 6px;
+}
 
-    .alert-title {
-      font-weight: 900;
-      margin-bottom: 6px;
-      font-size: 18px;
-    }
-
-    .alert-meta {
-      font-size: 13px;
-      opacity: .9;
-      margin-bottom: 8px;
-    }
-
-    .station-hit {
-      margin-top: 8px;
-      font-weight: 700;
-    }
-
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 rgba(255,0,0,0); }
-      50% { box-shadow: 0 0 18px rgba(255,0,0,.65); }
-      100% { box-shadow: 0 0 0 rgba(255,0,0,0); }
-    }
-  </style>
+.station-hit {
+  margin-top: 8px;
+  font-weight: 700;
+}
+</style>
 </head>
 
 <body>
@@ -114,349 +91,113 @@
 
 <div class="layout">
   <div id="map"></div>
-
-  <div class="panel">
-    <div id="alerts"></div>
-  </div>
+  <div class="panel"><div id="alerts"></div></div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
 <script>
-const map = L.map("map", {
-  zoomControl: true
-}).setView([34.75, -92.25], 7);
+const map = L.map("map").setView([34.75, -92.25], 7);
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-  maxZoom: 20
-}).addTo(map);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png").addTo(map);
 
 const stations = [
-  { name: "Station 1", lat: 34.7433819, lng: -92.2843613 },
-  { name: "Station 3", lat: 34.6690390, lng: -92.3581024 },
-  { name: "Station 4", lat: 34.7593041, lng: -92.3802302 },
-  { name: "Station 10", lat: 34.7991817, lng: -92.4554265 },
-  { name: "Cabot Station", lat: 34.9732158, lng: -92.0171126 },
-  { name: "Gravel Ridge Station", lat: 34.8686392, lng: -92.1978871 },
-  { name: "Maumelle Station", lat: 34.8569051, lng: -92.4070432 },
-  { name: "MEMS North", lat: 34.7812027, lng: -92.2743301 },
-  { name: "North Pulaski Station", lat: 34.9403325, lng: -92.1683398 },
-  { name: "Sheridan Station", lat: 34.3170329, lng: -92.3955182 },
-  { name: "Sherwood Station", lat: 34.8319372, lng: -92.2078739 },
-  { name: "Arch St Station", lat: 34.6174833, lng: -92.3157304 }
+  { name: "Cabot", lat: 34.97, lng: -92.01 },
+  { name: "Sheridan", lat: 34.31, lng: -92.39 },
+  { name: "Maumelle", lat: 34.85, lng: -92.40 },
+  { name: "Sherwood", lat: 34.83, lng: -92.20 },
+  { name: "Little Rock", lat: 34.74, lng: -92.28 }
 ];
 
 const stationLayer = L.layerGroup().addTo(map);
-const watchLayer = L.geoJSON(null, {
-  style: feature => {
-    const event = feature.properties.alertEvent || "";
+const watchLayer = L.geoJSON(null, {style:{color:"#f47b26",fillOpacity:.2}}).addTo(map);
+const warningLayer = L.geoJSON(null, {style:{color:"#ff0000",fillOpacity:.35}}).addTo(map);
 
-    return {
-      color: event === "Tornado Watch" ? "#b42318" : "#f47b26",
-      weight: 2,
-      fillColor: event === "Tornado Watch" ? "#b42318" : "#f47b26",
-      fillOpacity: 0.25
-    };
-  }
-}).addTo(map);
-
-const warningLayer = L.geoJSON(null, {
-  style: {
-    color: "#ff0000",
-    weight: 4,
-    fillColor: "#ff0000",
-    fillOpacity: 0.35
-  }
-}).addTo(map);
-
-stations.forEach(station => {
-  L.circleMarker([station.lat, station.lng], {
-    radius: 6,
-    color: "#ffffff",
-    weight: 2,
-    fillColor: "#005bea",
-    fillOpacity: 1
-  })
-  .bindPopup(`<strong>${station.name}</strong>`)
-  .addTo(stationLayer);
+stations.forEach(s=>{
+  L.circleMarker([s.lat,s.lng],{radius:6,color:"#fff",fillColor:"#005bea",fillOpacity:1})
+  .bindPopup(s.name).addTo(stationLayer);
 });
 
-async function loadAlerts() {
-  const container = document.getElementById("alerts");
-
-  container.innerHTML = "";
+async function loadAlerts(){
+  const container=document.getElementById("alerts");
+  container.innerHTML="";
   watchLayer.clearLayers();
   warningLayer.clearLayers();
   resetZones();
 
-  try {
-    // ALL your fetch + processing code here
-  } catch (error) {
-    console.error("Weather dashboard error:", error);
+  try{
+    const res=await fetch("https://api.weather.gov/alerts/active",{headers:{"Accept":"application/geo+json"}});
+    const data=await res.json();
 
-    container.innerHTML = `
-      <div class="alert-box warning">
-        <div class="alert-title">Unable to load alerts</div>
-        <div>${error.message}</div>
-      </div>
-    `;
-  }
-}
-if (!alertRes.ok) {
-  throw new Error(`NWS API failed: ${alertRes.status}`);
-}
-    const alertData = await alertRes.json();
-    const countyData = await countyRes.json();
-
-    const arkansasCounties = countyData.features.filter(feature => {
-      return feature.properties.STATE === "05";
+    const alerts=data.features.filter(a=>{
+      const e=a.properties.event;
+      return e==="Tornado Warning"||e==="Tornado Watch"||e==="Severe Thunderstorm Watch";
     });
 
-const targetAlerts = alertData.features.filter(alert => {
-  const event = alert.properties.event;
-  const area = alert.properties.areaDesc || "";
+    alerts.forEach(alert=>{
+      const p=alert.properties;
+      const event=p.event;
 
-  return (
-    (event === "Tornado Watch" ||
-     event === "Severe Thunderstorm Watch" ||
-     event === "Tornado Warning") &&
-    area.includes("AR")
-  );
-});
-
-    if (!targetAlerts.length) {
-      container.innerHTML = `
-        <div class="alert-box watch">
-          <div class="alert-title">No active severe alerts</div>
-          <div>No Tornado Watches, Severe Thunderstorm Watches, or Tornado Warnings for Arkansas.</div>
-        </div>
-      `;
-      return;
-    }
-
-    targetAlerts.forEach(alert => {
-      const p = alert.properties;
-      const event = p.event;
-      const areaDesc = p.areaDesc || "";
-      const featuresForImpact = [];
-
-      if (event === "Tornado Warning" && alert.geometry) {
+      if(event==="Tornado Warning" && alert.geometry){
         warningLayer.addData(alert);
-        featuresForImpact.push(alert);
       }
 
-      if (event === "Tornado Watch" || event === "Severe Thunderstorm Watch") {
-        arkansasCounties.forEach(county => {
-          const countyName = county.properties.NAME;
-
-          if (areaDesc.includes(countyName)) {
-            const clonedCounty = JSON.parse(JSON.stringify(county));
-            clonedCounty.properties.alertEvent = event;
-            watchLayer.addData(clonedCounty);
-            featuresForImpact.push(clonedCounty);
-          }
-        });
-      }
-
-      const impactIndex = buildPolygonIndex({
-        type: "FeatureCollection",
-        features: featuresForImpact
+      const impacted=stations.filter(st=>{
+        if(!alert.geometry) return false;
+        const pt=turf.point([st.lng,st.lat]);
+        return turf.booleanPointInPolygon(pt,alert);
       });
 
-      const affectedStations = getAffectedStations(impactIndex);
+      updateZones(impacted,event);
 
-      updateZonesFromStations(affectedStations, event);
-
-      container.innerHTML += `
-        <div class="alert-box ${event.includes("Warning") ? "warning" : "watch"}">
-          <div class="alert-title">${p.headline || event}</div>
-          <div class="alert-meta">
-            <strong>Issued:</strong> ${formatDate(p.effective)}<br>
-            <strong>Expires:</strong> ${formatDate(p.expires)}
-          </div>
-          <div>${formatAreas(areaDesc)}</div>
+      container.innerHTML+=`
+        <div class="alert-box ${event.includes("Warning")?"warning":"watch"}">
+          <div class="alert-title">${event}</div>
+          <div>${p.areaDesc || ""}</div>
           <div class="station-hit">
-            Areas of impact include:<br>
-            ${affectedStations.length ? affectedStations.map(s => s.name).join(", ") : "No MEMS stations currently inside this alert area."}
+            ${impacted.length?impacted.map(s=>s.name).join(", "):"No stations impacted"}
           </div>
         </div>
       `;
     });
 
-    const allLayers = L.featureGroup([watchLayer, warningLayer, stationLayer]);
+  }catch(err){
+    console.error(err);
+    container.innerHTML="<div class='alert-box warning'>API failed</div>";
+  }
+}
 
-    if (allLayers.getBounds().isValid()) {
-      map.fitBounds(allLayers.getBounds(), {
-        padding: [25, 25]
-      });
+function resetZones(){
+  document.querySelectorAll(".zone").forEach(z=>{
+    z.className="zone normal";
+  });
+}
+
+function updateZones(stations,event){
+  const zones=document.querySelectorAll(".zone");
+
+  stations.forEach(s=>{
+    let index=0;
+
+    if(s.name==="Little Rock") index=0;
+    if(s.name==="Sherwood") index=3;
+    if(s.name==="Maumelle") index=2;
+    if(s.name==="Cabot") index=4;
+    if(s.name==="Sheridan") index=6;
+
+    zones[index].classList.remove("normal");
+
+    if(event==="Tornado Warning"){
+      zones[index].classList.add("warning");
+    }else{
+      zones[index].classList.add("watch");
     }
-
-  } catch (error) {
-    console.error("Weather dashboard error:", error);
-
-    container.innerHTML = `
-      <div class="alert-box warning">
-        <div class="alert-title">Unable to load alerts</div>
-        <div>${error.message}</div>
-      </div>
-    `;
-  }
-
-function buildPolygonIndex(geojson) {
-  const indexed = [];
-
-  turf.flattenEach(geojson, feature => {
-    if (!feature || !feature.geometry) return;
-
-    const type = feature.geometry.type;
-
-    if (type !== "Polygon" && type !== "MultiPolygon") return;
-
-    indexed.push({
-      feature: feature,
-      bbox: turf.bbox(feature)
-    });
-  });
-
-  return indexed;
-}
-
-function pointInIndexedPolygons(point, indexedPolygons) {
-  const coords = point.geometry.coordinates;
-  const lng = coords[0];
-  const lat = coords[1];
-
-  for (const item of indexedPolygons) {
-    const b = item.bbox;
-
-    if (lng < b[0] || lat < b[1] || lng > b[2] || lat > b[3]) {
-      continue;
-    }
-
-    if (turf.booleanPointInPolygon(point, item.feature)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function getAffectedStations(index) {
-  return stations.filter(station => {
-    const pt = turf.point([station.lng, station.lat]);
-    return pointInIndexedPolygons(pt, index);
-  });
-}
-
-function resetZones() {
-  document.querySelectorAll(".zone").forEach(zone => {
-    zone.classList.remove("watch", "warning");
-    zone.classList.add("normal");
-  });
-}
-
-function updateZonesFromStations(affectedStations, event) {
-  affectedStations.forEach(station => {
-    const zones = findZonesForStation(station.name);
-
-    zones.forEach(zone => {
-      if (!zone) return;
-
-      zone.classList.remove("normal");
-
-      if (event === "Tornado Warning") {
-        zone.classList.remove("watch");
-        zone.classList.add("warning");
-      } else if (!zone.classList.contains("warning")) {
-        zone.classList.add("watch");
-      }
-    });
-  });
-}
-
-function findZonesForStation(name) {
-  const zones = document.querySelectorAll(".zone");
-  const matched = [];
-
-  if (
-    name.includes("Station 1") ||
-    name.includes("Station 3") ||
-    name.includes("Station 4") ||
-    name.includes("Station 10") ||
-    name.includes("MEMS North")
-  ) {
-    matched.push(zones[0]); // Little Rock
-  }
-
-  if (
-    name.includes("MEMS North") ||
-    name.includes("Station 4") ||
-    name.includes("Gravel Ridge") ||
-    name.includes("North Pulaski")
-  ) {
-    matched.push(zones[1]); // NLR
-  }
-
-  if (name.includes("Maumelle")) {
-    matched.push(zones[2]);
-  }
-
-  if (
-    name.includes("Sherwood") ||
-    name.includes("Gravel Ridge") ||
-    name.includes("North Pulaski")
-  ) {
-    matched.push(zones[3]);
-  }
-
-  if (name.includes("Cabot")) {
-    matched.push(zones[4]);
-  }
-
-  if (name.includes("Cabot")) {
-    matched.push(zones[5]); // Lonoke Co
-  }
-
-  if (
-    name.includes("Sheridan") ||
-    name.includes("Arch St")
-  ) {
-    matched.push(zones[6]); // Sheridan
-    matched.push(zones[7]); // Grant Co
-  }
-
-  return matched;
-}
-
-function formatAreas(areaDesc) {
-  if (!areaDesc) return "No area listed.";
-
-  const areas = areaDesc
-    .split(";")
-    .map(area => area.trim())
-    .filter(Boolean);
-
-  if (areas.length <= 8) {
-    return areas.join(", ");
-  }
-
-  return areas.slice(0, 8).join(", ") + `, +${areas.length - 8} more`;
-}
-
-function formatDate(value) {
-  if (!value) return "N/A";
-
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
   });
 }
 
 loadAlerts();
-setInterval(loadAlerts, 60000);
+setInterval(loadAlerts,60000);
 </script>
 
 </body>
