@@ -1076,6 +1076,7 @@ function buildAlertDetail(alert){
   const motion = parseStormMotion(p);
   const affectedStations = [];
   const affectedTowns = [];
+  const alertAreaNames = extractAreaNames(p.areaDesc);
   const affectedPOI = [];
 
   if(alert.geometry){
@@ -1083,8 +1084,13 @@ function buildAlertDetail(alert){
       if(turf.booleanPointInPolygon(turf.point([station.lng, station.lat]), alert)) affectedStations.push(station);
     });
 
-    towns.forEach(town => {
-      if(turf.booleanPointInPolygon(turf.point([town.lng, town.lat]), alert)) affectedTowns.push(town);
+    alertAreaNames.forEach(areaName => {
+      const matchedTown = towns.find(t => t.name.toLowerCase() === areaName.toLowerCase());
+      if(matchedTown){
+        if(turf.booleanPointInPolygon(turf.point([matchedTown.lng, matchedTown.lat]), alert)) affectedTowns.push(matchedTown);
+      }else{
+        affectedTowns.push({ name:areaName, zone:[] });
+      }
     });
 
     locations.forEach(location => {
@@ -1097,8 +1103,13 @@ function buildAlertDetail(alert){
       if(areaLooksRelevantToStation(area, station)) affectedStations.push(station);
     });
 
-    towns.forEach(town => {
-      if(areaLooksRelevantToTown(area, town)) affectedTowns.push(town);
+    alertAreaNames.forEach(areaName => {
+      const matchedTown = towns.find(t => t.name.toLowerCase() === areaName.toLowerCase());
+      if(matchedTown && areaLooksRelevantToTown(area, matchedTown)){
+        affectedTowns.push(matchedTown);
+      }else if(!matchedTown){
+        affectedTowns.push({ name:areaName, zone:[] });
+      }
     });
 
     locations.forEach(location => {
@@ -1115,7 +1126,7 @@ function buildAlertDetail(alert){
     areaDesc:p.areaDesc || "",
     motion,
     affectedStations:affectedStations.map(s => ({...s, impact:estimateImpactTime(alert, s, motion)})),
-    affectedTowns:affectedTowns.map(t => ({...t, impact:estimateImpactTime(alert, t, motion)})),
+    affectedTowns:affectedTowns.map(t => ({...t, impact:(t.lat !== undefined && t.lng !== undefined) ? estimateImpactTime(alert, t, motion) : "Timing not available"})),
     affectedPOI:affectedPOI.map(poi => ({...poi, impact:estimateImpactTime(alert, poi, motion)})),
     description:p.description || "",
     instruction:p.instruction || ""
@@ -1166,6 +1177,17 @@ function areaLooksRelevantToPOI(area, location){
   if(p.includes("pine bluff")) return a.includes("jefferson");
 
   return a.includes("pulaski");
+}
+
+function extractAreaNames(areaDesc){
+  if(!areaDesc) return [];
+
+  return [...new Set(
+    areaDesc
+      .split(";")
+      .map(name => name.trim())
+      .filter(Boolean)
+  )];
 }
 
 function parseStormMotion(p){
@@ -1257,7 +1279,7 @@ function openDetail(detail){
   const townItems = formatCondensedAlphabetizedList(
     detail.affectedTowns,
     t => `${t.name} <strong>(${t.impact})</strong>`,
-    "No tracked towns currently inside this alert area."
+    "No affected towns listed for this alert area."
   );
 
   const locationItems = formatLocationsByType(detail.affectedPOI);
