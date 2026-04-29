@@ -1,130 +1,1513 @@
-diff --git a/index.html b/index.html
-index 66ed30d9ad32c1f65f7d283f4eb65585706aa3a8..745651c49a77970b868b74166d286bca4ffd4bf2 100644
---- a/index.html
-+++ b/index.html
-@@ -1054,51 +1054,51 @@ function formatTitle(p){
-   return number ? `${p.event} #${number}` : (p.event || "Weather Alert");
- }
- 
- function getAlertNumber(p){
-   const params = p.parameters || {};
-   const vtecList = Array.isArray(params.VTEC) ? params.VTEC : [];
- 
-   for(const vtec of vtecList){
-     const parts = String(vtec).split(".");
-     const raw = parts[6];
-     if(raw && /^\d+$/.test(raw)) return String(Number(raw));
-   }
- 
-   const headline = p.headline || "";
-   const match = headline.match(/(?:watch|warning)\s+(\d+)/i);
-   if(match) return match[1];
- 
-   return "";
- }
- 
- function buildAlertDetail(alert){
-   const p = alert.properties;
-   const motion = parseStormMotion(p);
-   const affectedStations = [];
-   const affectedTowns = [];
--  const alertAreaNames = extractAreaNames(p.areaDesc);
-+  const alertAreaNames = extractImpactedLocations(p);
-   const affectedPOI = [];
- 
-   if(alert.geometry){
-     stations.forEach(station => {
-       if(turf.booleanPointInPolygon(turf.point([station.lng, station.lat]), alert)) affectedStations.push(station);
-     });
- 
-     alertAreaNames.forEach(areaName => {
-       const matchedTown = towns.find(t => t.name.toLowerCase() === areaName.toLowerCase());
-       if(matchedTown){
-         if(turf.booleanPointInPolygon(turf.point([matchedTown.lng, matchedTown.lat]), alert)) affectedTowns.push(matchedTown);
-       }else{
-         affectedTowns.push({ name:areaName, zone:[] });
-       }
-     });
- 
-     locations.forEach(location => {
-       if(turf.booleanPointInPolygon(turf.point([location.lng, location.lat]), alert)) affectedPOI.push(location);
-     });
-   }else{
-     const area = p.areaDesc || "";
- 
-     stations.forEach(station => {
-       if(areaLooksRelevantToStation(area, station)) affectedStations.push(station);
-     });
-@@ -1158,50 +1158,72 @@ function areaLooksRelevantToTown(area, town){
-   const a = area.toLowerCase();
-   return town.zone.some(z => {
-     if(["little-rock","nlr","maumelle","sherwood"].includes(z)) return a.includes("pulaski");
-     if(["cabot","lonoke"].includes(z)) return a.includes("lonoke");
-     if(["sheridan","grant"].includes(z)) return a.includes("grant");
-     return false;
-   });
- }
- 
- function areaLooksRelevantToPOI(area, location){
-   const a = area.toLowerCase();
-   const p = `${location.name} ${location.area}`.toLowerCase();
- 
-   if(p.includes("cabot")) return a.includes("lonoke");
-   if(p.includes("lonoke")) return a.includes("lonoke");
-   if(p.includes("sheridan") || p.includes("grant")) return a.includes("grant");
-   if(p.includes("benton") || p.includes("saline")) return a.includes("saline");
-   if(p.includes("conway")) return a.includes("faulkner");
-   if(p.includes("searcy")) return a.includes("white");
-   if(p.includes("malvern")) return a.includes("hot spring");
-   if(p.includes("pine bluff")) return a.includes("jefferson");
- 
-   return a.includes("pulaski");
- }
- 
-+function extractImpactedLocations(p){
-+  const impacted = extractLocationsImpactedInclude(`${p.description || ""}\n${p.instruction || ""}`);
-+  if(impacted.length) return impacted;
-+
-+  return extractAreaNames(p.areaDesc);
-+}
-+
-+function extractLocationsImpactedInclude(text){
-+  if(!text) return [];
-+
-+  const match = text.match(/locations\s+impacted\s+include\s*\.\.\.\s*([\s\S]*?)(?:\n\n|\*|PRECAUTIONARY|HAZARD|SOURCE|IMPACT|TORNADO|SEVERE|TIME|MOTION|$)/i);
-+  if(!match) return [];
-+
-+  return [...new Set(
-+    match[1]
-+      .replace(/\n+/g, ' ')
-+      .split(/,|\.\s+/)
-+      .map(name => name.replace(/\s+/g, ' ').trim())
-+      .filter(Boolean)
-+  )];
-+}
-+
- function extractAreaNames(areaDesc){
-   if(!areaDesc) return [];
- 
-   return [...new Set(
-     areaDesc
-       .split(";")
-       .map(name => name.trim())
-       .filter(Boolean)
-   )];
- }
- 
- function parseStormMotion(p){
-   const text = `${p.description || ""} ${p.instruction || ""}`;
-   const match = text.match(/moving\s+([A-Z]+)\s+at\s+(\d+)\s+mph/i);
-   if(!match) return null;
-   return { direction:match[1].toUpperCase(), speed:Number(match[2]) };
- }
- 
- function estimateImpactTime(alert, point, motion){
-   if(!alert.geometry || !motion || !motion.speed) return "Timing not available";
- 
-   try{
-     const miles = turf.distance(turf.centroid(alert), turf.point([point.lng, point.lat]), { units:"miles" });
-     const minutes = Math.round((miles / motion.speed) * 60);
- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MEMS Weather Center</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+:root{
+  --green:#1f7a3a;
+  --yellow:#facc15;
+  --orange:#f97316;
+  --red:#dc2626;
+  --purple:#7e22ce;
+  --dark:#080808;
+  --panel:#101418;
+  --border:rgba(255,255,255,.10);
+  --muted:#cbd5e1;
+  --blue:#005bea;
+  --mems-orange:#f47b26;
+}
+
+*{box-sizing:border-box;}
+
+html,body{
+  height:100%;
+  margin:0;
+  background:radial-gradient(circle at top,#111827 0%, #05070b 55%, #030407 100%);
+  color:white;
+  font-family:Arial, Helvetica, sans-serif;
+  overflow:hidden;
+}
+
+body{
+  display:flex;
+  flex-direction:column;
+}
+
+header{
+  height:58px;
+  background:rgba(2,6,12,.88);
+  backdrop-filter: blur(6px);
+  border-bottom:1px solid var(--border);
+  padding:10px 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  flex-shrink:0;
+}
+
+.header-title{
+  font-size:25px;
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+.header-info{
+  text-align:right;
+  font-size:13px;
+  line-height:1.35;
+  color:#e5e7eb;
+}
+
+.top-bar{
+  height:38px;
+  display:flex;
+  flex-shrink:0;
+}
+
+.zone{
+  flex:1;
+  text-align:center;
+  font-weight:900;
+  font-size:13px;
+  color:white;
+  border-right:1px solid rgba(255,255,255,.25);
+  padding:0;
+}
+
+.zone.normal{background:var(--green);}
+.zone.tstorm-watch{background:var(--yellow); color:#111;}
+.zone.tstorm-warning{background:var(--orange);}
+.zone.tornado-watch{background:var(--red);}
+.zone.tornado-warning{background:var(--purple);}
+.zone.tornado-emergency{
+  background:linear-gradient(90deg,var(--red),var(--purple));
+  animation:pulseEmergency 1s infinite;
+}
+
+.zone-btn{
+  width:100%;
+  height:100%;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.zone-btn:hover{
+  background:rgba(255,255,255,.16);
+}
+
+.layout{
+  flex:1;
+  min-height:0;
+  display:grid;
+  grid-template-columns:70% 30%;
+}
+
+#map{
+  height:100%;
+  min-height:0;
+  background:#111;
+}
+
+.panel{
+  background:linear-gradient(180deg, rgba(17,24,39,.82), rgba(15,23,42,.7));
+  border-left:1px solid var(--border);
+  padding:14px;
+  overflow-y:auto;
+  min-height:0;
+}
+
+.alert-box{
+  padding:13px;
+  transition:transform .15s ease, box-shadow .2s ease;
+  margin-bottom:12px;
+  border-radius:8px;
+  cursor:pointer;
+  border-left:5px solid white;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);
+}
+
+.alert-box.normal{background:linear-gradient(135deg,#166534,#14532d);}
+.alert-box.tstorm-watch{background:#a16207;}
+.alert-box.tstorm-warning{background:linear-gradient(135deg,#ea580c,#c2410c);}
+.alert-box.tornado-watch{background:linear-gradient(135deg,#dc2626,#991b1b);}
+.alert-box.tornado-warning{background:linear-gradient(135deg,#7e22ce,#581c87);}
+.alert-box.tornado-emergency{
+  background:linear-gradient(135deg,var(--red),var(--purple));
+  animation:pulseEmergency 1s infinite;
+}
+
+.alert-box:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(0,0,0,.35);
+}
+
+.alert-title{
+  font-weight:900;
+  font-size:17px;
+  margin-bottom:6px;
+}
+
+.alert-meta{
+  font-size:13px;
+  opacity:.92;
+  margin-bottom:8px;
+  line-height:1.35;
+}
+
+.station-hit{
+  margin-top:8px;
+  font-size:13px;
+  line-height:1.45;
+}
+
+.station-hit-title{
+  font-weight:900;
+  margin-bottom:4px;
+}
+
+.station-list-line{
+  display:block;
+  font-weight:700;
+}
+
+.station-marker{
+  background:var(--blue);
+  border:2px solid white;
+  border-radius:50%;
+  width:14px;
+  height:14px;
+  box-shadow:0 0 8px rgba(0,0,0,.6);
+}
+
+.station-marker.impacted{
+  background:#fff;
+  border-color:#ff0000;
+  box-shadow:0 0 18px #ff0000;
+}
+
+.poi-marker{
+  background:rgba(251,191,36,.5);
+  border:1px solid rgba(251,191,36,.6);
+  border-radius:50%;
+  width:7px;
+  height:7px;
+  opacity:.45;
+  transition:all .2s ease;
+}
+
+.poi-marker.zoomed{
+  width:12px;
+  height:12px;
+  opacity:.95;
+  border-width:2px;
+  box-shadow:0 0 12px rgba(250,204,21,.7);
+}
+
+.bottom-bar{
+  height:104px;
+  flex-shrink:0;
+  display:grid;
+  grid-template-columns:170px repeat(5, 1fr);
+  gap:10px;
+  padding:10px 12px;
+  background:linear-gradient(90deg,#020617,#0f172a);
+  border-top:3px solid var(--mems-orange);
+}
+
+.conditions-title,
+.condition-card{
+  border-radius:10px;
+  background:rgba(15,23,42,.78);
+  border:1px solid var(--border);
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+}
+
+.conditions-title{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:10px;
+  background:rgba(2,6,23,.92);
+}
+
+.conditions-title span:first-child{
+  color:var(--mems-orange);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+
+.conditions-title span:last-child{
+  font-size:20px;
+  font-weight:900;
+  margin-top:4px;
+}
+
+.condition-card{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:10px 12px;
+}
+
+.condition-card .label{
+  font-size:12px;
+  font-weight:900;
+  color:#aaa;
+  letter-spacing:.08em;
+  margin-bottom:5px;
+}
+
+.condition-card .value{
+  font-size:25px;
+  font-weight:900;
+  line-height:1;
+}
+
+.condition-card .sub{
+  font-size:12px;
+  color:#ddd;
+  margin-top:6px;
+}
+
+.condition-card.temp{border-left:5px solid #38bdf8;}
+.condition-card.rain{border-left:5px solid #22c55e;}
+.condition-card.wind{border-left:5px solid #f97316;}
+.condition-card.lightning{border-left:5px solid #facc15;}
+.condition-card.updated{border-left:5px solid #94a3b8;}
+
+.condition-card.warn{
+  background:linear-gradient(135deg,#7f1d1d,#111);
+  border-color:#ef4444;
+}
+
+.condition-card.caution{
+  background:linear-gradient(135deg,#78350f,#111);
+  border-color:#f97316;
+}
+
+.condition-card.lightning-near{
+  background:linear-gradient(135deg,#713f12,#111);
+  border-color:#facc15;
+  animation:pulseLightning 1.4s infinite;
+}
+
+#detailOverlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.78);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
+}
+
+.detail-card{
+  width:min(860px,92vw);
+  max-height:88vh;
+  overflow-y:auto;
+  background:#101010;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.65);
+}
+
+.detail-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.detail-title{
+  font-size:24px;
+  font-weight:900;
+}
+
+.close-btn{
+  background:#fff;
+  color:#111;
+  border:0;
+  border-radius:6px;
+  padding:8px 10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.detail-section{
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.15);
+}
+
+.detail-list{
+  margin:8px 0 0 18px;
+  padding:0;
+  line-height:1.6;
+}
+
+@keyframes pulseEmergency{
+  0%{box-shadow:0 0 0 rgba(255,0,0,0);}
+  50%{box-shadow:0 0 24px rgba(255,0,255,.85);}
+  100%{box-shadow:0 0 0 rgba(255,0,0,0);}
+}
+
+@media (max-width: 1200px){
+  .layout{grid-template-columns:64% 36%;}
+  .bottom-bar{grid-template-columns:140px repeat(5,1fr);}
+}
+
+@media (max-width: 980px){
+  body{overflow:auto;}
+  .layout{grid-template-columns:1fr; grid-template-rows:58vh 42vh;}
+  .panel{border-left:0; border-top:1px solid var(--border);}
+  .bottom-bar{height:auto; grid-template-columns:repeat(2,1fr);}
+  .conditions-title{grid-column:1 / -1;}
+}
+
+@keyframes pulseLightning{
+  0%{box-shadow:0 0 0 rgba(250,204,21,0);}
+  50%{box-shadow:0 0 18px rgba(250,204,21,.8);}
+  100%{box-shadow:0 0 0 rgba(250,204,21,0);}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="header-title">MEMS WEATHER CENTER</div>
+  <div class="header-info">
+    <div>Information Time: <strong id="infoTime">--:--</strong></div>
+    <div>Next Refresh: <strong id="refreshCountdown">60s</strong></div>
+  </div>
+</header>
+
+<div class="top-bar">
+  <div class="zone normal" data-zone="little-rock"><button class="zone-btn" onclick="openZoneDetail('little-rock')">LITTLE ROCK</button></div>
+  <div class="zone normal" data-zone="nlr"><button class="zone-btn" onclick="openZoneDetail('nlr')">NLR</button></div>
+  <div class="zone normal" data-zone="maumelle"><button class="zone-btn" onclick="openZoneDetail('maumelle')">MAUMELLE</button></div>
+  <div class="zone normal" data-zone="sherwood"><button class="zone-btn" onclick="openZoneDetail('sherwood')">SHERWOOD</button></div>
+  <div class="zone normal" data-zone="cabot"><button class="zone-btn" onclick="openZoneDetail('cabot')">CABOT</button></div>
+  <div class="zone normal" data-zone="lonoke"><button class="zone-btn" onclick="openZoneDetail('lonoke')">LONOKE CO</button></div>
+  <div class="zone normal" data-zone="sheridan"><button class="zone-btn" onclick="openZoneDetail('sheridan')">SHERIDAN</button></div>
+  <div class="zone normal" data-zone="grant"><button class="zone-btn" onclick="openZoneDetail('grant')">GRANT CO</button></div>
+</div>
+
+<div class="layout">
+  <div id="map"></div>
+  <div class="panel">
+    <div id="alerts"></div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="conditions-title">
+    <span>STATION 1</span>
+    <span>LIVE WEATHER</span>
+  </div>
+
+  <div class="condition-card temp" id="tempCard">
+    <div class="label">TEMP</div>
+    <div class="value" id="tempValue">--°</div>
+    <div class="sub" id="humidityValue">Humidity --%</div>
+  </div>
+
+  <div class="condition-card rain" id="rainCard">
+    <div class="label">RAIN</div>
+    <div class="value" id="rainValue">--"</div>
+    <div class="sub" id="rainRateValue">Rate --"/hr</div>
+  </div>
+
+  <div class="condition-card wind" id="windCard">
+    <div class="label">WIND</div>
+    <div class="value" id="windValue">--G--</div>
+    <div class="sub" id="windSubValue">Direction --</div>
+  </div>
+
+  <div class="condition-card lightning" id="lightningCard">
+    <div class="label">LIGHTNING</div>
+    <div class="value" id="lightningValue">NONE</div>
+    <div class="sub" id="lightningSubValue">No recent strike</div>
+  </div>
+
+  <div class="condition-card updated" id="updatedCard">
+    <div class="label">TEMPEST UPDATED</div>
+    <div class="value" id="tempestUpdatedValue">--:--</div>
+    <div class="sub" id="tempestAgeValue">Waiting for data</div>
+  </div>
+</div>
+
+<div id="detailOverlay">
+  <div class="detail-card">
+    <div class="detail-header">
+      <div>
+        <div class="detail-title" id="detailTitle"></div>
+        <div class="alert-meta" id="detailMeta"></div>
+      </div>
+      <button class="close-btn" onclick="closeDetail()">CLOSE</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+<script>
+const TEMPEST_STATION_ID = "136293";
+const TEMPEST_TOKEN = "a394fe76-fe00-4227-836b-f574a15ce385";
+
+const REFRESH_SECONDS = 60;
+const USER_ACTIVITY_HOLD_MS = 5 * 60 * 1000;
+
+let secondsUntilRefresh = REFRESH_SECONDS;
+let lastUserMapActivity = 0;
+let latestPanelAlerts = [];
+let latestAllArkansasAlerts = [];
+
+let outlookData = {
+  tornado:null,
+  hail:null,
+  wind:null,
+  excessiveRain:null
+};
+
+const AR_BOUNDS = L.latLngBounds([33.00, -94.75], [36.65, -89.55]);
+const AR_CENTER = [34.75, -92.25];
+const AR_ZOOM = 7;
+
+const map = L.map("map", {
+  maxBounds: AR_BOUNDS.pad(0.08),
+  maxBoundsViscosity: 1.0
+}).setView(AR_CENTER, AR_ZOOM);
+
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+  maxZoom:20,
+  attribution:"© OpenStreetMap © CARTO"
+}).addTo(map);
+
+map.on("mousemove dragstart zoomstart movestart", function(){
+  lastUserMapActivity = Date.now();
+});
+
+const stations = [
+  { name:"Station 1", area:"Little Rock", zone:["little-rock"], lat:34.7433819, lng:-92.2843613 },
+  { name:"Station 3", area:"Little Rock", zone:["little-rock"], lat:34.6690390, lng:-92.3581024 },
+  { name:"Station 4", area:"Little Rock / NLR", zone:["little-rock","nlr"], lat:34.7593041, lng:-92.3802302 },
+  { name:"Station 10", area:"Little Rock", zone:["little-rock"], lat:34.7991817, lng:-92.4554265 },
+  { name:"Cabot Station", area:"Cabot / Lonoke County", zone:["cabot","lonoke"], lat:34.9732158, lng:-92.0171126 },
+  { name:"Gravel Ridge Station", area:"NLR / Sherwood", zone:["nlr","sherwood"], lat:34.8686392, lng:-92.1978871 },
+  { name:"Maumelle Station", area:"Maumelle", zone:["maumelle"], lat:34.8569051, lng:-92.4070432 },
+  { name:"MEMS North", area:"Little Rock / NLR", zone:["little-rock","nlr"], lat:34.7812027, lng:-92.2743301 },
+  { name:"North Pulaski Station", area:"North Pulaski / Sherwood", zone:["nlr","sherwood"], lat:34.9403325, lng:-92.1683398 },
+  { name:"Sheridan Station", area:"Sheridan / Grant County", zone:["sheridan","grant"], lat:34.3170329, lng:-92.3955182 },
+  { name:"Sherwood Station", area:"Sherwood", zone:["sherwood"], lat:34.8319372, lng:-92.2078739 },
+  { name:"Arch St Station", area:"South Pulaski / Grant County", zone:["sheridan","grant"], lat:34.6174833, lng:-92.3157304 }
+];
+
+const locations = [
+  { name:"Greystone", area:"Cabot", type:"Neighborhood", lat:35.02923764117509, lng:-92.05865556970093, radius:"2 miles" },
+  { name:"Clinton Nat. Airport", area:"Little Rock", type:"Airport", lat:34.7284011058131, lng:-92.22039216234353, radius:"1 mile" },
+  { name:"Wrightsville Correctional Unit", area:"Wrightsville", type:"Correctional", lat:34.60194061960711, lng:-92.19260013773142, radius:".25 miles" },
+  { name:"LR Air Force Base", area:"Jacksonville", type:"Military", lat:34.90639838445616, lng:-92.14395233018587, radius:"1 mile" },
+  { name:"LR Veterans Hospital", area:"Little Rock", type:"Hospital", lat:34.746267149080055, lng:-92.32047667930003, radius:"1 mile" },
+  { name:"UAMS", area:"Little Rock", type:"Hospital", lat:34.74744666257331, lng:-92.32088969840527, radius:".25 miles" },
+  { name:"St. Vincent Infirmary", area:"Little Rock", type:"Hospital", lat:34.75033284961561, lng:-92.33940377918991, radius:"1 mile" },
+  { name:"Baptist Med Center LR", area:"Little Rock", type:"Hospital", lat:34.74480435362505, lng:-92.38089211015347, radius:".25 miles" },
+  { name:"Arkansas Heart Hospital", area:"Little Rock", type:"Hospital", lat:34.73922859302091, lng:-92.39358428834757, radius:"1 mile" },
+  { name:"Arkansas Childrens", area:"Little Rock", type:"Hospital", lat:34.74198874170889, lng:-92.29300715213085, radius:"1 mile" },
+  { name:"Saline Memorial", area:"Benton", type:"Hospital", lat:34.57494971990144, lng:-92.59375497712537, radius:"1 mile" },
+  { name:"Baptist Springhill", area:"North Little Rock", type:"Hospital", lat:34.78394874277726, lng:-92.22312924338553, radius:"1 mile" },
+  { name:"SVI North", area:"Sherwood", type:"Hospital", lat:34.81344283040206, lng:-92.20907267741393, radius:"1 mile" },
+  { name:"Unity Jacksonville", area:"Jacksonville", type:"Hospital", lat:34.87316535170868, lng:-92.12534698787888, radius:"1 mile" },
+  { name:"Cabot Emergency Hospital", area:"Cabot", type:"Hospital", lat:34.98186175242931, lng:-92.03483579161522, radius:"1 mile" },
+  { name:"Unity Searcy", area:"Searcy", type:"Hospital", lat:35.2519019242663, lng:-91.69724613374575, radius:"1 mile" },
+  { name:"Baptist Hot Spring County", area:"Malvern", type:"Hospital", lat:34.358715333160184, lng:-92.78587668356282, radius:"1 mile" },
+  { name:"Jefferson Regional", area:"Pine Bluff", type:"Hospital", lat:34.18816847629358, lng:-92.0175729276134, radius:"1 mile" },
+  { name:"Camp Robinson Gate", area:"North Little Rock", type:"Military", lat:34.814341913579206, lng:-92.29026940852049, radius:"1 mile" },
+  { name:"Camp Robinson Air Field", area:"North Little Rock", type:"Military", lat:34.843067898247455, lng:-92.30758595632308, radius:".5 miles" },
+  { name:"NLR Airport", area:"North Little Rock", type:"Airport", lat:34.83274690489968, lng:-92.25665331558987, radius:".5 miles" },
+  { name:"Conway Regional Medical Center", area:"Conway", type:"Hospital", lat:35.0855885850444, lng:-92.45778239317336, radius:"1 mile" },
+  { name:"Baptist Conway", area:"Conway", type:"Hospital", lat:35.0561499713529, lng:-92.41939841750165, radius:"1 mile" },
+  { name:"Pinnacle MTN", area:"Little Rock", type:"Landmark", lat:34.84164634982719, lng:-92.48591891234585, radius:".5 miles" }
+];
+
+const towns = [
+  { name:"Little Rock", zone:["little-rock"], lat:34.7465, lng:-92.2896 },
+  { name:"North Little Rock", zone:["nlr"], lat:34.7695, lng:-92.2671 },
+  { name:"Maumelle", zone:["maumelle"], lat:34.8668, lng:-92.4043 },
+  { name:"Sherwood", zone:["sherwood"], lat:34.8151, lng:-92.2243 },
+  { name:"Cabot", zone:["cabot","lonoke"], lat:34.9745, lng:-92.0165 },
+  { name:"Lonoke", zone:["lonoke"], lat:34.7839, lng:-91.8999 },
+  { name:"Sheridan", zone:["sheridan","grant"], lat:34.3070, lng:-92.4013 }
+];
+
+const zoneProfiles = {
+  "little-rock": {
+    title:"Little Rock",
+    center:[34.7465, -92.2896],
+    stations:["Station 1","Station 3","Station 4","Station 10","MEMS North"]
+  },
+  "nlr": {
+    title:"North Little Rock",
+    center:[34.7695, -92.2671],
+    stations:["Station 4","MEMS North","Gravel Ridge Station","North Pulaski Station"]
+  },
+  "maumelle": {
+    title:"Maumelle",
+    center:[34.8668, -92.4043],
+    stations:["Maumelle Station"]
+  },
+  "sherwood": {
+    title:"Sherwood",
+    center:[34.8151, -92.2243],
+    stations:["Sherwood Station","Gravel Ridge Station","North Pulaski Station"]
+  },
+  "cabot": {
+    title:"Cabot",
+    center:[34.9745, -92.0165],
+    stations:["Cabot Station"]
+  },
+  "lonoke": {
+    title:"Lonoke County",
+    center:[34.7839, -91.8999],
+    stations:["Cabot Station"]
+  },
+  "sheridan": {
+    title:"Sheridan",
+    center:[34.3070, -92.4013],
+    stations:["Sheridan Station","Arch St Station"]
+  },
+  "grant": {
+    title:"Grant County",
+    center:[34.2900, -92.4200],
+    stations:["Sheridan Station","Arch St Station"]
+  }
+};
+
+const stationLayer = L.layerGroup().addTo(map);
+const poiLayer = L.layerGroup().addTo(map);
+
+const warningLayer = L.geoJSON(null, {
+  style:function(feature){
+    const severity = getSeverity(feature.properties);
+    return {
+      color: severity === "tornado-emergency" ? "#ff00ff" :
+             severity === "tornado-warning" ? "#7e22ce" :
+             "#f97316",
+      weight: severity === "tornado-emergency" ? 5 : 4,
+      fillColor: severity === "tornado-emergency" ? "#dc2626" :
+                 severity === "tornado-warning" ? "#7e22ce" :
+                 "#f97316",
+      fillOpacity: severity === "tornado-emergency" ? .42 : .34
+    };
+  },
+  onEachFeature:function(feature, layer){
+    layer.on("click", function(){
+      openDetail(buildAlertDetail(feature));
+    });
+  }
+}).addTo(map);
+
+stations.forEach(station => {
+  const icon = L.divIcon({
+    className:"",
+    html:`<div class="station-marker" id="marker-${slug(station.name)}"></div>`,
+    iconSize:[18,18],
+    iconAnchor:[9,9]
+  });
+
+  L.marker([station.lat, station.lng], { icon })
+    .bindPopup(`<strong>${station.name}</strong><br>${station.area}`)
+    .addTo(stationLayer);
+});
+
+locations.forEach(location => {
+  const icon = L.divIcon({
+    className:"",
+    html:`<div class="poi-marker" id="location-marker-${slug(location.name)}"></div>`,
+    iconSize:[15,15],
+    iconAnchor:[7,7]
+  });
+
+  L.marker([location.lat, location.lng], { icon })
+    .bindPopup(`<strong>${location.name}</strong><br>Type: ${location.type}<br>Watch radius: ${location.radius || "N/A"}`)
+    .addTo(poiLayer);
+});
+
+L.control.layers(null, {
+  "Stations": stationLayer,
+  "Locations": poiLayer,
+  "Warning Polygons": warningLayer
+}, {
+  collapsed:false,
+  position:"topleft"
+}).addTo(map);
+
+function updateLocationMarkerProminence(){
+  const isZoomedIn = map.getZoom() >= 10;
+  document.querySelectorAll(".poi-marker").forEach(el => {
+    el.classList.toggle("zoomed", isZoomedIn);
+  });
+}
+
+map.on("zoomend", updateLocationMarkerProminence);
+updateLocationMarkerProminence();
+
+async function loadTempestConditions(){
+  if(!TEMPEST_STATION_ID || TEMPEST_TOKEN === "PASTE_YOUR_TOKEN_HERE"){
+    setTempestUnavailable("Token not configured");
+    return;
+  }
+
+  try{
+    const url = `https://swd.weatherflow.com/swd/rest/observations/station/${TEMPEST_STATION_ID}?token=${TEMPEST_TOKEN}`;
+    const res = await fetch(url);
+
+    if(!res.ok){
+      throw new Error("Tempest API failed: " + res.status);
+    }
+
+    const data = await res.json();
+    const obs = data.obs && data.obs[0];
+
+    if(!obs){
+      throw new Error("No Tempest observation returned");
+    }
+
+    const airTempF = cToF(obs.air_temperature);
+    const humidity = safeRound(obs.relative_humidity);
+    const windMph = msToMph(obs.wind_avg);
+    const gustMph = msToMph(obs.wind_gust);
+    const windDir = degToCompass(obs.wind_direction);
+    const rainDay = mmToIn(obs.precip_accum_local_day);
+    const rainRate = mmToIn(obs.precip);
+    const lightningKm = obs.lightning_strike_last_distance;
+    const lightningMiles = lightningKm ? Math.round(lightningKm * 0.621371) : null;
+    const lightningTime = obs.lightning_strike_last_epoch;
+    const obsEpoch = obs.timestamp || obs.epoch;
+    const ageSec = obsEpoch ? Math.floor((Date.now() / 1000) - obsEpoch) : null;
+
+    document.getElementById("tempValue").textContent = `${airTempF}°`;
+    document.getElementById("humidityValue").textContent = `Humidity ${humidity}%`;
+
+    document.getElementById("rainValue").textContent = `${rainDay}"`;
+    document.getElementById("rainRateValue").textContent = `Rate ${rainRate}"/hr`;
+
+    document.getElementById("windValue").textContent = `${windMph}G${gustMph}`;
+    document.getElementById("windSubValue").textContent = `${windDir} / MPH`;
+
+    if(lightningTime && lightningMiles !== null){
+      document.getElementById("lightningValue").textContent = `${lightningMiles} MI`;
+      document.getElementById("lightningSubValue").textContent = `Last strike distance`;
+    }else{
+      document.getElementById("lightningValue").textContent = "NONE";
+      document.getElementById("lightningSubValue").textContent = "No recent strike";
+    }
+
+    document.getElementById("tempestUpdatedValue").textContent = obsEpoch ? formatTime24(new Date(obsEpoch * 1000).toISOString()) : "--:--";
+    document.getElementById("tempestAgeValue").textContent = ageSec !== null ? `${ageSec}s ago` : "Age unavailable";
+
+    updateConditionCardClasses(gustMph, lightningMiles, ageSec);
+
+  }catch(err){
+    console.error("Tempest error:", err);
+    setTempestUnavailable(err.message);
+  }
+}
+
+async function loadOutlookData(){
+  const endpoints = {
+    tornado:"https://www.spc.noaa.gov/products/outlook/day1probotlk_torn.lyr.geojson",
+    hail:"https://www.spc.noaa.gov/products/outlook/day1probotlk_hail.lyr.geojson",
+    wind:"https://www.spc.noaa.gov/products/outlook/day1probotlk_wind.lyr.geojson",
+    excessiveRain:"https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
+  };
+
+  for(const key in endpoints){
+    try{
+      const res = await fetch(endpoints[key]);
+      if(!res.ok) throw new Error(key + " failed");
+      outlookData[key] = await res.json();
+    }catch(err){
+      console.warn("Outlook load failed:", key, err);
+      outlookData[key] = null;
+    }
+  }
+}
+
+async function loadAlerts(){
+  const container = document.getElementById("alerts");
+  container.innerHTML = "";
+  warningLayer.clearLayers();
+  latestPanelAlerts = [];
+
+  resetZones();
+  resetStationMarkers();
+
+  try{
+    const res = await fetch("https://api.weather.gov/alerts/active", {
+      headers:{ "Accept":"application/geo+json" }
+    });
+
+    if(!res.ok){
+      throw new Error("NWS API failed: " + res.status);
+    }
+
+    const data = await res.json();
+
+    document.getElementById("infoTime").textContent = formatTime24(new Date().toISOString());
+
+    const allArkansasAlerts = data.features
+      .filter(isArkansasRelevantAlert)
+      .sort(sortAlerts);
+
+    latestAllArkansasAlerts = allArkansasAlerts;
+
+    const panelAlerts = allArkansasAlerts
+      .filter(isNwsLittleRockAlert)
+      .sort(sortAlerts);
+
+    latestPanelAlerts = panelAlerts;
+
+    allArkansasAlerts.forEach(alert => {
+      if(shouldDrawPolygon(alert)){
+        warningLayer.addData(alert);
+      }
+
+      const detail = buildAlertDetail(alert);
+      applyZoneStatus(detail.affectedStations, detail.affectedTowns, getSeverity(alert.properties));
+      highlightImpactedStations(detail.affectedStations);
+    });
+
+    if(!panelAlerts.length){
+      container.innerHTML = `
+        <div class="alert-box normal">
+          <div class="alert-title">No LZK Watches or Warnings</div>
+          <div class="alert-meta">No active tracked watches or warnings issued by NWS Little Rock.</div>
+        </div>
+      `;
+    }
+
+    panelAlerts.forEach(alert => {
+      const p = alert.properties;
+      const severity = getSeverity(p);
+      const detail = buildAlertDetail(alert);
+
+      container.insertAdjacentHTML("beforeend", `
+        <div class="alert-box ${severity}" onclick='openDetailById("${alert.id}")'>
+          <div class="alert-title">${formatTitle(p)}</div>
+          <div class="alert-meta">
+            <strong>Issued by:</strong> ${p.senderName || "NWS Little Rock"}<br>
+            <strong>Expires:</strong> ${formatTime24(p.expires)}<br>
+            <strong>Areas:</strong> ${formatAreas(p.areaDesc)}
+          </div>
+          <div class="station-hit">
+            <div class="station-hit-title">Affected Stations</div>
+            ${formatAffectedStations(detail.affectedStations)}
+          </div>
+        </div>
+      `);
+    });
+
+    maintainMapViewAfterRefresh();
+
+  }catch(err){
+    console.error(err);
+    container.innerHTML = `
+      <div class="alert-box tornado-warning">
+        <div class="alert-title">Unable to load alerts</div>
+        <div class="alert-meta">${err.message}</div>
+      </div>
+    `;
+  }
+}
+
+function openZoneDetail(zoneId){
+  const profile = zoneProfiles[zoneId];
+  if(!profile) return;
+
+  const zoneStations = stations.filter(s => profile.stations.includes(s.name));
+  const zonePoint = turf.point([profile.center[1], profile.center[0]]);
+
+  const activeAlerts = latestAllArkansasAlerts.filter(alert => {
+    const detail = buildAlertDetail(alert);
+    return detail.affectedStations.some(s => profile.stations.includes(s.name));
+  });
+
+  const alertItems = activeAlerts.length
+    ? activeAlerts.map(alert => `
+        <li>
+          <strong>${formatTitle(alert.properties)}</strong>
+          — Expires ${formatTime24(alert.properties.expires)}
+        </li>
+      `).join("")
+    : "<li>No current watches or warnings for this station group.</li>";
+
+  const stationItems = zoneStations.map(s => `<li>${s.name}</li>`).join("");
+  const outlook = getOutlookForPoint(zonePoint);
+
+  document.getElementById("detailTitle").textContent = profile.title;
+
+  document.getElementById("detailMeta").innerHTML = `
+    <strong>Station Radar View</strong><br>
+    Local station group view centered on ${profile.title}
+  `;
+
+  document.getElementById("detailBody").innerHTML = `
+    <div class="detail-section">
+      <strong>Station Radar View</strong>
+      <div id="stationRadarMap" style="height:280px;margin-top:10px;border-radius:10px;overflow:hidden;"></div>
+    </div>
+
+    <div class="detail-section">
+      <strong>Outlook Data</strong>
+      <ul class="detail-list">
+        <li>Tornado — <strong>${outlook.tornado}</strong></li>
+        <li>Hail — <strong>${outlook.hail}</strong></li>
+        <li>Wind — <strong>${outlook.wind}</strong></li>
+        <li>Excessive Rain — <strong>${outlook.excessiveRain}</strong></li>
+      </ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Stations</strong>
+      <ul class="detail-list">${stationItems}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Current Watches and Warnings</strong>
+      <ul class="detail-list">${alertItems}</ul>
+    </div>
+  `;
+
+  document.getElementById("detailOverlay").style.display = "flex";
+
+  setTimeout(() => {
+    buildStationRadarMap(profile, zoneStations);
+  }, 100);
+}
+
+function buildStationRadarMap(profile, zoneStations){
+  const miniMap = L.map("stationRadarMap", {
+    zoomControl:true,
+    attributionControl:false
+  }).setView(profile.center, 9);
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom:20
+  }).addTo(miniMap);
+
+  latestAllArkansasAlerts.forEach(alert => {
+    if(shouldDrawPolygon(alert)){
+      L.geoJSON(alert, {
+        style:{
+          color:getSeverity(alert.properties) === "tornado-warning" ? "#7e22ce" : "#f97316",
+          weight:3,
+          fillOpacity:.25
+        }
+      }).addTo(miniMap);
+    }
+  });
+
+  zoneStations.forEach(s => {
+    L.circleMarker([s.lat, s.lng], {
+      radius:7,
+      color:"#fff",
+      weight:2,
+      fillColor:"#005bea",
+      fillOpacity:1
+    }).bindPopup(`<strong>${s.name}</strong>`).addTo(miniMap);
+  });
+}
+
+function getOutlookForPoint(point){
+  return {
+    tornado:getOutlookLabel(point, outlookData.tornado),
+    hail:getOutlookLabel(point, outlookData.hail),
+    wind:getOutlookLabel(point, outlookData.wind),
+    excessiveRain:getOutlookLabel(point, outlookData.excessiveRain)
+  };
+}
+
+function getOutlookLabel(point, geojson){
+  if(!geojson || !geojson.features) return "Not loaded";
+
+  let best = "None";
+
+  geojson.features.forEach(feature => {
+    if(!feature.geometry) return;
+
+    try{
+      if(turf.booleanPointInPolygon(point, feature)){
+        best = readOutlookProperties(feature.properties);
+      }
+    }catch(e){}
+  });
+
+  return best;
+}
+
+function readOutlookProperties(props){
+  return (
+    props.LABEL ||
+    props.label ||
+    props.RISK ||
+    props.risk ||
+    props.CATEGORY ||
+    props.category ||
+    props.DN ||
+    props.dn ||
+    props.THRESHOLD ||
+    props.threshold ||
+    "Included"
+  );
+}
+
+function maintainMapViewAfterRefresh(){
+  const userRecentlyActive = Date.now() - lastUserMapActivity < USER_ACTIVITY_HOLD_MS;
+  if(userRecentlyActive) return;
+  map.setView(AR_CENTER, AR_ZOOM, { animate:false });
+}
+
+function isArkansasRelevantAlert(alert){
+  const p = alert.properties;
+  const event = p.event || "";
+  const ugc = p.geocode?.UGC || [];
+  const area = p.areaDesc || "";
+
+  const isAR =
+    ugc.some(code => code.startsWith("AR")) ||
+    area.includes(", AR") ||
+    area.includes(" AR;") ||
+    area.endsWith(" AR");
+
+  const tracked =
+    event === "Tornado Watch" ||
+    event === "Severe Thunderstorm Watch" ||
+    event === "Severe Thunderstorm Warning" ||
+    event === "Tornado Warning";
+
+  return isAR && tracked;
+}
+
+function isNwsLittleRockAlert(alert){
+  const p = alert.properties;
+  const senderName = (p.senderName || "").toUpperCase();
+  const sender = (p.sender || "").toUpperCase();
+  const params = p.parameters || {};
+
+  const awips = Array.isArray(params.AWIPSidentifier) ? params.AWIPSidentifier.join(" ").toUpperCase() : "";
+  const wmo = Array.isArray(params.WMOidentifier) ? params.WMOidentifier.join(" ").toUpperCase() : "";
+  const nwsHeadline = Array.isArray(params.NWSheadline) ? params.NWSheadline.join(" ").toUpperCase() : "";
+
+  return (
+    senderName.includes("LITTLE ROCK") ||
+    senderName.includes("NWS LITTLE ROCK") ||
+    sender.includes("LZK") ||
+    awips.includes("LZK") ||
+    wmo.includes("KLZK") ||
+    nwsHeadline.includes("LITTLE ROCK")
+  );
+}
+
+function shouldDrawPolygon(alert){
+  const event = alert.properties.event || "";
+  const severity = getSeverity(alert.properties);
+
+  return alert.geometry && (
+    event === "Tornado Warning" ||
+    event === "Severe Thunderstorm Warning" ||
+    severity === "tornado-emergency"
+  );
+}
+
+function getSeverity(p){
+  const event = p.event || "";
+  const text = `${p.headline || ""} ${p.description || ""} ${p.instruction || ""}`.toUpperCase();
+
+  if(event === "Tornado Warning" && text.includes("TORNADO EMERGENCY")) return "tornado-emergency";
+  if(event === "Tornado Warning") return "tornado-warning";
+  if(event === "Tornado Watch") return "tornado-watch";
+  if(event === "Severe Thunderstorm Warning") return "tstorm-warning";
+  if(event === "Severe Thunderstorm Watch") return "tstorm-watch";
+
+  return "normal";
+}
+
+function formatTitle(p){
+  const severity = getSeverity(p);
+  const number = getAlertNumber(p);
+
+  if(severity === "tornado-emergency") return number ? `Tornado Emergency #${number}` : "Tornado Emergency";
+  return number ? `${p.event} #${number}` : (p.event || "Weather Alert");
+}
+
+function getAlertNumber(p){
+  const params = p.parameters || {};
+  const vtecList = Array.isArray(params.VTEC) ? params.VTEC : [];
+
+  for(const vtec of vtecList){
+    const parts = String(vtec).split(".");
+    const raw = parts[6];
+    if(raw && /^\d+$/.test(raw)) return String(Number(raw));
+  }
+
+  const headline = p.headline || "";
+  const match = headline.match(/(?:watch|warning)\s+(\d+)/i);
+  if(match) return match[1];
+
+  return "";
+}
+
+function buildAlertDetail(alert){
+  const p = alert.properties;
+  const motion = parseStormMotion(p);
+  const affectedStations = [];
+  const affectedTowns = [];
+  const alertAreaNames = extractAreaNames(p.areaDesc);
+  const affectedPOI = [];
+
+  if(alert.geometry){
+    stations.forEach(station => {
+      if(turf.booleanPointInPolygon(turf.point([station.lng, station.lat]), alert)) affectedStations.push(station);
+    });
+
+    alertAreaNames.forEach(areaName => {
+      const matchedTown = towns.find(t => t.name.toLowerCase() === areaName.toLowerCase());
+      if(matchedTown){
+        if(turf.booleanPointInPolygon(turf.point([matchedTown.lng, matchedTown.lat]), alert)) affectedTowns.push(matchedTown);
+      }else{
+        affectedTowns.push({ name:areaName, zone:[] });
+      }
+    });
+
+    locations.forEach(location => {
+      if(turf.booleanPointInPolygon(turf.point([location.lng, location.lat]), alert)) affectedPOI.push(location);
+    });
+  }else{
+    const area = p.areaDesc || "";
+
+    stations.forEach(station => {
+      if(areaLooksRelevantToStation(area, station)) affectedStations.push(station);
+    });
+
+    alertAreaNames.forEach(areaName => {
+      const matchedTown = towns.find(t => t.name.toLowerCase() === areaName.toLowerCase());
+      if(matchedTown && areaLooksRelevantToTown(area, matchedTown)){
+        affectedTowns.push(matchedTown);
+      }else if(!matchedTown){
+        affectedTowns.push({ name:areaName, zone:[] });
+      }
+    });
+
+    locations.forEach(location => {
+      if(areaLooksRelevantToPOI(area, location)) affectedPOI.push(location);
+    });
+  }
+
+  return {
+    id:alert.id,
+    title:formatTitle(p),
+    event:p.event || "",
+    severity:getSeverity(p),
+    expires:p.expires,
+    areaDesc:p.areaDesc || "",
+    motion,
+    affectedStations:affectedStations.map(s => ({...s, impact:estimateImpactTime(alert, s, motion)})),
+    affectedTowns:affectedTowns.map(t => ({...t, impact:(t.lat !== undefined && t.lng !== undefined) ? estimateImpactTime(alert, t, motion) : "Timing not available"})),
+    affectedPOI:affectedPOI.map(poi => ({...poi, impact:estimateImpactTime(alert, poi, motion)})),
+    description:p.description || "",
+    instruction:p.instruction || "",
+    geometry:alert.geometry || null
+  };
+}
+
+function formatAffectedStations(stationsHit){
+  if(!stationsHit.length){
+    return `<span class="station-list-line">No MEMS stations currently inside this alert area.</span>`;
+  }
+
+  return stationsHit
+    .map(s => `<span class="station-list-line">${s.name} — ${s.impact}</span>`)
+    .join("");
+}
+
+function areaLooksRelevantToStation(area, station){
+  const a = area.toLowerCase();
+  return station.zone.some(z => {
+    if(["little-rock","nlr","maumelle","sherwood"].includes(z)) return a.includes("pulaski");
+    if(["cabot","lonoke"].includes(z)) return a.includes("lonoke");
+    if(["sheridan","grant"].includes(z)) return a.includes("grant");
+    return false;
+  });
+}
+
+function areaLooksRelevantToTown(area, town){
+  const a = area.toLowerCase();
+  return town.zone.some(z => {
+    if(["little-rock","nlr","maumelle","sherwood"].includes(z)) return a.includes("pulaski");
+    if(["cabot","lonoke"].includes(z)) return a.includes("lonoke");
+    if(["sheridan","grant"].includes(z)) return a.includes("grant");
+    return false;
+  });
+}
+
+function areaLooksRelevantToPOI(area, location){
+  const a = area.toLowerCase();
+  const p = `${location.name} ${location.area}`.toLowerCase();
+
+  if(p.includes("cabot")) return a.includes("lonoke");
+  if(p.includes("lonoke")) return a.includes("lonoke");
+  if(p.includes("sheridan") || p.includes("grant")) return a.includes("grant");
+  if(p.includes("benton") || p.includes("saline")) return a.includes("saline");
+  if(p.includes("conway")) return a.includes("faulkner");
+  if(p.includes("searcy")) return a.includes("white");
+  if(p.includes("malvern")) return a.includes("hot spring");
+  if(p.includes("pine bluff")) return a.includes("jefferson");
+
+  return a.includes("pulaski");
+}
+
+function extractAreaNames(areaDesc){
+  if(!areaDesc) return [];
+
+  return [...new Set(
+    areaDesc
+      .split(";")
+      .map(name => name.trim())
+      .filter(Boolean)
+  )];
+}
+
+function parseStormMotion(p){
+  const text = `${p.description || ""} ${p.instruction || ""}`;
+  const match = text.match(/moving\s+([A-Z]+)\s+at\s+(\d+)\s+mph/i);
+  if(!match) return null;
+  return { direction:match[1].toUpperCase(), speed:Number(match[2]) };
+}
+
+function estimateImpactTime(alert, point, motion){
+  if(!alert.geometry || !motion || !motion.speed) return "Timing not available";
+
+  try{
+    const miles = turf.distance(turf.centroid(alert), turf.point([point.lng, point.lat]), { units:"miles" });
+    const minutes = Math.round((miles / motion.speed) * 60);
+
+    if(minutes <= 0) return "Now";
+    if(minutes > 180) return "3+ hr";
+
+    return `~${minutes} min / ${formatTime24(new Date(Date.now() + minutes * 60000).toISOString())}`;
+  }catch(e){
+    return "Timing not available";
+  }
+}
+
+function applyZoneStatus(stationsHit, townsHit, severity){
+  const affectedZones = new Set();
+
+  stationsHit.forEach(s => s.zone.forEach(z => affectedZones.add(z)));
+  townsHit.forEach(t => t.zone.forEach(z => affectedZones.add(z)));
+
+  affectedZones.forEach(zoneName => {
+    const el = document.querySelector(`[data-zone="${zoneName}"]`);
+    if(el) setZoneSeverity(el, severity);
+  });
+}
+
+function setZoneSeverity(el, severity){
+  const rank = {
+    "normal":0,
+    "tstorm-watch":1,
+    "tstorm-warning":2,
+    "tornado-watch":3,
+    "tornado-warning":4,
+    "tornado-emergency":5
+  };
+
+  const current = Array.from(el.classList).find(c => rank[c] !== undefined) || "normal";
+  if(rank[severity] >= rank[current]) el.className = `zone ${severity}`;
+}
+
+function highlightImpactedStations(stationsHit){
+  stationsHit.forEach(station => {
+    const markerEl = document.getElementById(`marker-${slug(station.name)}`);
+    if(markerEl) markerEl.classList.add("impacted");
+  });
+}
+
+function resetStationMarkers(){
+  document.querySelectorAll(".station-marker").forEach(el => el.classList.remove("impacted"));
+}
+
+function resetZones(){
+  document.querySelectorAll(".zone").forEach(zone => {
+    zone.className = "zone normal";
+  });
+}
+
+function openDetailById(id){
+  const alert = latestPanelAlerts.find(a => a.id === id);
+  if(alert) openDetail(buildAlertDetail(alert));
+}
+
+function openDetail(detail){
+  document.getElementById("detailTitle").textContent = detail.title;
+
+  document.getElementById("detailMeta").innerHTML = `
+    <strong>Expires:</strong> ${formatTime24(detail.expires)}<br>
+    <strong>Motion:</strong> ${detail.motion ? `${detail.motion.direction} at ${detail.motion.speed} mph` : "Not available"}<br>
+    <strong>Areas:</strong> ${formatAreas(detail.areaDesc)}
+  `;
+
+  const stationItems = formatCondensedAlphabetizedList(
+    detail.affectedStations,
+    s => `${s.name} <strong>(${s.impact})</strong>`,
+    "No MEMS stations currently inside this alert area."
+  );
+
+  const townItems = formatCondensedAlphabetizedList(
+    detail.affectedTowns,
+    t => `${t.name} <strong>(${t.impact})</strong>`,
+    "No affected towns listed for this alert area."
+  );
+
+  const locationItems = formatLocationsByType(detail.affectedPOI);
+
+  document.getElementById("detailBody").innerHTML = `
+    <div class="detail-section">
+      <strong>Affected Stations</strong>
+      <ul class="detail-list">${stationItems}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Affected Towns</strong>
+      <ul class="detail-list" id="affectedTownsList">${townItems}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Locations</strong>
+      <ul class="detail-list">${locationItems}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Instruction</strong>
+      <div>${detail.instruction || "No instruction included."}</div>
+    </div>
+  `;
+
+  document.getElementById("detailOverlay").style.display = "flex";
+  hydrateAffectedTowns(detail);
+}
+
+async function hydrateAffectedTowns(detail){
+  const listEl = document.getElementById("affectedTownsList");
+  if(!listEl) return;
+  if(!detail.geometry){
+    return;
+  }
+
+  listEl.innerHTML = "<li>Loading towns/cities/townships from warning polygon…</li>";
+
+  try{
+    const names = await fetchPlacesInPolygon(detail.geometry);
+    if(!names.length){
+      listEl.innerHTML = "<li>No towns/cities/townships found inside this alert polygon.</li>";
+      return;
+    }
+
+    listEl.innerHTML = names
+      .sort((a,b) => a.localeCompare(b))
+      .map(name => `<li>${name}</li>`)
+      .join("");
+  }catch(err){
+    console.warn("Unable to load polygon places", err);
+    listEl.innerHTML = "<li>Unable to load dynamic towns for this polygon.</li>";
+  }
+}
+
+async function fetchPlacesInPolygon(geometry){
+  const rings = geometry.type === "Polygon" ? [geometry.coordinates[0]] : geometry.coordinates[0].map(poly => poly[0]).filter(Boolean);
+  if(!rings.length) return [];
+
+  const queries = rings.map(ring => {
+    const samples = ring.filter((_, idx) => idx % 2 === 0).slice(0, 120);
+    const poly = samples.map(coord => `${coord[1]} ${coord[0]}`).join(" ");
+    return `nwr["place"~"city|town|village|hamlet|suburb|quarter|neighbourhood"](poly:"${poly}");`;
+  }).join("\n");
+
+  const overpassQuery = `[out:json][timeout:25];(\n${queries}\n);out tags;`;
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=UTF-8"},
+    body:overpassQuery
+  });
+
+  if(!res.ok) throw new Error("Overpass request failed: " + res.status);
+  const data = await res.json();
+  const names = (data.elements || [])
+    .map(el => el.tags && (el.tags.name || el.tags["name:en"]))
+    .filter(Boolean);
+
+  return [...new Set(names)];
+}
+
+
+
+function formatCondensedAlphabetizedList(items, renderItem, emptyMessage){
+  if(!items.length) return `<li>${emptyMessage}</li>`;
+
+  return [...items]
+    .sort((a,b) => a.name.localeCompare(b.name))
+    .map(item => `<li>${renderItem(item)}</li>`)
+    .join("");
+}
+
+function formatLocationsByType(locationsList){
+  if(!locationsList.length) return "<li>No locations currently inside this alert area.</li>";
+
+  const groups = {};
+  locationsList.forEach(location => {
+    const type = location.type || "Other";
+    if(!groups[type]) groups[type] = [];
+    groups[type].push(location);
+  });
+
+  return Object.keys(groups)
+    .sort((a,b) => a.localeCompare(b))
+    .map(type => {
+      const sorted = groups[type].sort((a,b) => a.name.localeCompare(b.name));
+      const entries = sorted.map(l => `${l.name} <strong>(${l.impact})</strong>`).join(", ");
+      return `<li><strong>${type}:</strong> ${entries}</li>`;
+    })
+    .join("");
+}
+
+function closeDetail(){
+  document.getElementById("detailOverlay").style.display = "none";
+}
+
+function formatAreas(areaDesc){
+  if(!areaDesc) return "None listed";
+  const areas = areaDesc.split(";").map(a => a.trim()).filter(Boolean);
+  if(areas.length <= 8) return areas.join(", ");
+  return areas.slice(0,8).join(", ") + `, +${areas.length - 8} more`;
+}
+
+function formatTime24(value){
+  if(!value) return "N/A";
+  return new Date(value).toLocaleTimeString("en-US", {
+    hour:"2-digit",
+    minute:"2-digit",
+    hour12:false
+  });
+}
+
+function sortAlerts(a,b){
+  const rank = {
+    "tornado-emergency":5,
+    "tornado-warning":4,
+    "tornado-watch":3,
+    "tstorm-warning":2,
+    "tstorm-watch":1,
+    "normal":0
+  };
+
+  return rank[getSeverity(b.properties)] - rank[getSeverity(a.properties)];
+}
+
+function slug(value){
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+}
+
+function cToF(c){
+  if(c === null || c === undefined) return "--";
+  return Math.round((c * 9 / 5) + 32);
+}
+
+function msToMph(ms){
+  if(ms === null || ms === undefined) return "--";
+  return Math.round(ms * 2.23694);
+}
+
+function mmToIn(mm){
+  if(mm === null || mm === undefined) return "--";
+  return (mm / 25.4).toFixed(2);
+}
+
+function safeRound(value){
+  if(value === null || value === undefined) return "--";
+  return Math.round(value);
+}
+
+function degToCompass(deg){
+  if(deg === null || deg === undefined) return "--";
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+function updateRefreshCountdown(){
+  secondsUntilRefresh--;
+
+  if(secondsUntilRefresh <= 0){
+    secondsUntilRefresh = REFRESH_SECONDS;
+    loadAlerts();
+  }
+
+  document.getElementById("refreshCountdown").textContent = secondsUntilRefresh + "s";
+}
+
+function updateConditionCardClasses(gustMph, lightningMiles, ageSec){
+  const windCard = document.getElementById("windCard");
+  const lightningCard = document.getElementById("lightningCard");
+  const updatedCard = document.getElementById("updatedCard");
+
+  windCard.className = "condition-card wind";
+  lightningCard.className = "condition-card lightning";
+  updatedCard.className = "condition-card updated";
+
+  if(gustMph >= 50) windCard.classList.add("warn");
+  else if(gustMph >= 35) windCard.classList.add("caution");
+
+  if(lightningMiles !== null && lightningMiles <= 10) lightningCard.classList.add("lightning-near");
+  else if(lightningMiles !== null && lightningMiles <= 20) lightningCard.classList.add("caution");
+
+  if(ageSec !== null && ageSec > 180) updatedCard.classList.add("warn");
+  else if(ageSec !== null && ageSec > 90) updatedCard.classList.add("caution");
+}
+
+function setTempestUnavailable(reason){
+  document.getElementById("tempValue").textContent = "--°";
+  document.getElementById("humidityValue").textContent = reason;
+  document.getElementById("rainValue").textContent = "--";
+  document.getElementById("rainRateValue").textContent = "Rate --";
+  document.getElementById("windValue").textContent = "--G--";
+  document.getElementById("windSubValue").textContent = "Direction --";
+  document.getElementById("lightningValue").textContent = "--";
+  document.getElementById("lightningSubValue").textContent = "Unavailable";
+  document.getElementById("tempestUpdatedValue").textContent = "--:--";
+  document.getElementById("tempestAgeValue").textContent = "Tempest unavailable";
+}
+
+loadAlerts();
+loadTempestConditions();
+loadOutlookData();
+
+setInterval(loadOutlookData, 10 * 60 * 1000);
+setInterval(updateRefreshCountdown, 1000);
+setInterval(loadTempestConditions, 60000);
+</script>
+
+</body>
+</html>
