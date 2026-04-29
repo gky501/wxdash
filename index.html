@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MEMS Weather Center</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-
 <style>
+
 :root{
   --green:#1f7a3a;
   --yellow:#facc15;
@@ -236,6 +237,37 @@ header{
   box-shadow:0 0 18px rgba(255,255,255,.95);
 }
 
+.major-track-label{
+  background:rgba(2,6,23,.94);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.45);
+  border-left:5px solid #f97316;
+  border-radius:7px;
+  padding:4px 7px;
+  font-size:11px;
+  font-weight:900;
+  line-height:1.15;
+  white-space:nowrap;
+  box-shadow:0 6px 16px rgba(0,0,0,.45);
+}
+
+.major-track-label .eta{
+  color:#facc15;
+  font-size:12px;
+}
+
+.major-impact-label{
+  background:rgba(127,29,29,.95);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.4);
+  border-radius:999px;
+  padding:3px 8px;
+  font-size:10px;
+  font-weight:900;
+  white-space:nowrap;
+  box-shadow:0 5px 14px rgba(0,0,0,.45);
+}
+
 .bottom-bar{
   height:104px;
   flex-shrink:0;
@@ -405,11 +437,67 @@ header{
   50%{box-shadow:0 0 18px rgba(250,204,21,.8);}
   100%{box-shadow:0 0 0 rgba(250,204,21,0);}
 }
+
+
+/* ===== Screenshot-style storm dashboard overrides ===== */
+:root{--glass:rgba(3,8,13,.78);--glass-strong:rgba(3,8,13,.92);--line:rgba(255,255,255,.22);--hot:#f47b26;--blue2:#2563eb;}
+html,body{background:#020406;font-family:Arial,Helvetica,sans-serif;}
+body{height:100vh;display:grid;grid-template-rows:76px 1fr 132px;overflow:hidden;}
+header{height:76px;padding:10px 18px;background:linear-gradient(180deg,#020406,#070b10);border-bottom:1px solid rgba(255,255,255,.20);display:grid;grid-template-columns:210px 1fr 185px;gap:16px;}
+.header-title{display:flex;flex-direction:column;line-height:.9;letter-spacing:0;font-size:0}
+.header-title::before{content:"MEMS";color:var(--hot);font-size:33px;font-weight:1000;font-style:italic;letter-spacing:.5px}
+.header-title::after{content:"Weather Center";color:#fff;font-size:22px;font-weight:900;font-style:italic;margin-top:5px}
+.header-info{font-size:13px;align-self:center}.header-info #infoTime{font-size:30px;display:block;margin-top:2px}
+.top-bar{height:100%;gap:6px;align-items:center;padding:0}
+.zone{height:56px;border-radius:4px;border:1px solid rgba(255,255,255,.14);box-shadow:0 6px 18px rgba(0,0,0,.28);overflow:hidden}
+.zone-btn{display:flex;align-items:center;justify-content:center;flex-direction:column;text-shadow:0 1px 3px rgba(0,0,0,.35);font-size:12px;line-height:1.2}
+.zone.normal{background:linear-gradient(180deg,#0a8a40,#05672d)}
+.zone.tstorm-watch{background:linear-gradient(180deg,#facc15,#d8a800);color:#080808}
+.zone.tstorm-warning{background:linear-gradient(180deg,#f97316,#c2410c)}
+.zone.tornado-watch,.zone.tornado-warning{background:linear-gradient(180deg,#dc2626,#991b1b)}
+.zone.tornado-emergency{background:linear-gradient(90deg,#dc2626,#7e22ce)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;min-height:0;height:100%;border-bottom:1px solid rgba(255,255,255,.25)}
+.map-wrap{position:relative;min-height:0;overflow:hidden;border-right:1px solid rgba(255,255,255,.25)}
+#map{height:100%;width:100%;background:#081018}
+.leaflet-control-layers{display:none!important}.leaflet-control-zoom a{background:#f8fafc!important;color:#111!important;font-weight:900}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#161616;color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(0,0,0,.55)}
+.leaflet-popup-content{font-size:13px;line-height:1.35}
+.map-controls{position:absolute;left:14px;top:104px;z-index:900;width:255px;background:linear-gradient(180deg,rgba(2,6,12,.92),rgba(2,8,14,.82));border:1px solid rgba(255,255,255,.24);border-radius:5px;box-shadow:0 18px 40px rgba(0,0,0,.5);overflow:hidden;backdrop-filter:blur(8px)}
+.controls-title{font-size:13px;font-weight:900;padding:12px 13px 9px;border-bottom:1px solid rgba(255,255,255,.18);letter-spacing:.02em}
+.controls-title.small{border-top:1px solid rgba(255,255,255,.16);border-bottom:0;padding-bottom:7px}
+.control-row{height:38px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 12px;border-bottom:1px solid rgba(255,255,255,.11);font-size:14px}
+.toggle{appearance:none;width:38px;height:21px;border-radius:999px;background:#4b5563;position:relative;outline:none;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.toggle:checked{background:#2563eb}.toggle::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;background:#fff;border-radius:50%;transition:.15s ease}.toggle:checked::after{left:20px}
+.legend-block{padding:9px 12px 12px;font-size:11px;color:#dbe4ee;border-bottom:1px solid rgba(255,255,255,.11)}
+.dbz-bar{height:13px;margin:8px 0 4px;background:linear-gradient(90deg,#1e40af,#0ea5e9,#16a34a,#facc15,#f97316,#dc2626,#a21caf,#f9a8d4);border:1px solid rgba(255,255,255,.35)}
+.dbz-scale{display:flex;justify-content:space-between;font-size:10px;color:#fff}
+.track-buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 12px 12px}
+.track-buttons button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;border-radius:5px;font-size:11px;padding:8px 0;cursor:pointer}
+.track-buttons button.active{background:#2563eb;border-color:#60a5fa}
+.panel{padding:0;background:#061016;border-left:1px solid rgba(255,255,255,.22);display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+#alerts{padding:14px;overflow-y:auto}
+#alerts::before{content:"ACTIVE ALERTS";display:block;color:#d1d5db;font-size:16px;font-weight:900;margin:0 0 12px;letter-spacing:.03em}
+.alert-box{border-radius:5px;border:1px solid rgba(255,255,255,.15);border-left:0;box-shadow:0 9px 22px rgba(0,0,0,.36);padding:15px 16px;margin-bottom:10px}
+.alert-title{font-size:18px;text-transform:uppercase}.alert-meta{font-size:13px;color:#f8fafc}
+.station-hit{border-top:1px solid rgba(255,255,255,.18);padding-top:8px;margin-top:10px}.station-hit-title{color:#facc15;text-transform:uppercase;font-size:12px}
+.track-label,.major-track-label{background:transparent;border:0;box-shadow:none;color:#fff;text-shadow:0 2px 5px #000,0 0 3px #000;font-size:18px;font-weight:1000;padding:0}
+.major-track-label .eta{color:#fff;font-size:18px}.track-origin{width:18px;height:18px;border:3px solid #fff;background:#111;box-shadow:0 0 0 2px #111,0 0 18px rgba(255,255,255,.9)}
+.major-impact-label{background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.5);color:#fff;font-size:13px;text-shadow:0 2px 4px #000}
+.bottom-bar{height:132px;display:grid;grid-template-columns:280px repeat(4,1fr) 360px;gap:0;padding:0;background:#061016;border-top:1px solid rgba(255,255,255,.26)}
+.conditions-title,.condition-card{border-radius:0;border:0;border-right:1px solid rgba(255,255,255,.25);background:linear-gradient(180deg,rgba(7,16,22,.96),rgba(3,8,13,.96));box-shadow:none;padding:18px 22px}
+.conditions-title span:first-child{font-size:18px;color:#facc15}.conditions-title span:last-child{font-size:14px;font-weight:700;color:#fff;margin-top:7px}
+.condition-card .label{font-size:15px;color:#d1d5db}.condition-card .value{font-size:30px}.condition-card .sub{font-size:15px;color:#f3f4f6}
+.condition-card.temp,.condition-card.rain,.condition-card.wind,.condition-card.lightning,.condition-card.updated{border-left:0}
+.condition-card.temp .value::before{content:"☁️ ";font-size:32px}.condition-card.rain .value::before{content:"💧 "}.condition-card.wind .value::before{content:"≋ ";color:#f97316}.condition-card.lightning .value::before{content:"⚡ ";color:#facc15}
+.condition-card.updated{display:none}
+.bottom-bar::after{content:"MEMS STATIONS\A  ◉ Online   ◉ Impacted   ● POI\A VIEW STATION LIST";white-space:pre-line;display:flex;align-items:center;padding:18px 22px;color:#fff;font-weight:800;line-height:2;background:linear-gradient(180deg,rgba(7,16,22,.96),rgba(3,8,13,.96))}
+#detailOverlay{background:rgba(0,0,0,.58)}.detail-card{background:#071016;border:1px solid rgba(255,255,255,.28);border-radius:6px;width:min(740px,92vw)}.detail-title{text-transform:uppercase}.detail-section{border-top:1px solid rgba(255,255,255,.16)}.close-btn{border-radius:4px}
+@media(max-width:1200px){body{grid-template-rows:72px 1fr 112px}header{grid-template-columns:180px 1fr 145px}.layout{grid-template-columns:minmax(0,1fr) 330px}.map-controls{width:230px}.bottom-bar{grid-template-columns:220px repeat(4,1fr)}.bottom-bar::after{display:none}}
+@media(max-width:900px){body{overflow:auto;display:block}header{height:auto;display:block}.top-bar{flex-wrap:wrap;height:auto;margin-top:10px}.zone{min-width:48%}.layout{display:block}.map-wrap{height:60vh}.panel{height:45vh}.map-controls{position:absolute;left:10px;top:80px;transform:scale(.92);transform-origin:top left}.bottom-bar{height:auto;grid-template-columns:1fr 1fr}.conditions-title{grid-column:1/-1}}
+
 </style>
 </head>
-
 <body>
-
 <header>
   <div class="header-title">MEMS WEATHER CENTER</div>
   <div class="header-info">
@@ -430,10 +518,41 @@ header{
 </div>
 
 <div class="layout">
-  <div id="map"></div>
-  <div class="panel">
+  <main class="map-wrap">
+    <div id="map"></div>
+
+    <section class="map-controls" aria-label="Map controls">
+      <div class="controls-title">MAP CONTROLS</div>
+
+      <label class="control-row">
+        <span>Radar Reflectivity</span>
+        <input type="checkbox" class="toggle" checked onchange="setLayerVisible('radar', this.checked)">
+      </label>
+
+      <div class="legend-block">
+        <div>Legend: dBZ</div>
+        <div class="dbz-bar"></div>
+        <div class="dbz-scale"><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>70</span><span>80</span></div>
+      </div>
+
+      <label class="control-row"><span>Storm Tracks</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('tracks', this.checked)"></label>
+      <label class="control-row"><span>MEMS Stations</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('stations', this.checked)"></label>
+      <label class="control-row"><span>Points of Interest</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('poi', this.checked)"></label>
+      <label class="control-row"><span>Warning Polygons</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('warnings', this.checked)"></label>
+
+      <div class="controls-title small">TRACK TIME STEPS</div>
+      <div class="track-buttons">
+        <button type="button" class="active">15 min</button>
+        <button type="button">30 min</button>
+        <button type="button">45 min</button>
+        <button type="button">60 min</button>
+      </div>
+    </section>
+  </main>
+  <aside class="panel">
     <div id="alerts"></div>
   </div>
+  </aside>
 </div>
 
 <div class="bottom-bar">
@@ -485,11 +604,10 @@ header{
     <div id="detailBody"></div>
   </div>
 </div>
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-
 <script>
+
 const TEMPEST_STATION_ID = "136293";
 const TEMPEST_TOKEN = "a394fe76-fe00-4227-836b-f574a15ce385";
 
@@ -639,7 +757,7 @@ const radarLayer = L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wm
   transparent:true,
   opacity:.58,
   attribution:"Radar: Iowa State Mesonet / NEXRAD"
-});
+}).addTo(map);
 
 const stormTrackLayer = L.layerGroup().addTo(map);
 
@@ -700,6 +818,26 @@ L.control.layers(null, {
   collapsed:false,
   position:"topleft"
 }).addTo(map);
+
+
+function setLayerVisible(layerName, isVisible){
+  const layers = {
+    radar: radarLayer,
+    tracks: stormTrackLayer,
+    stations: stationLayer,
+    poi: poiLayer,
+    warnings: warningLayer
+  };
+
+  const layer = layers[layerName];
+  if(!layer) return;
+
+  if(isVisible){
+    if(!map.hasLayer(layer)) layer.addTo(map);
+  }else{
+    if(map.hasLayer(layer)) map.removeLayer(layer);
+  }
+}
 
 function updateLocationMarkerProminence(){
   const isZoomedIn = map.getZoom() >= 10;
@@ -1361,9 +1499,12 @@ function directionToBearing(direction){
 
 function drawStormTrack(alert){
   const p = alert.properties || {};
+  if(!shouldDrawMajorStormTrack(p)) return;
+
   const motion = parseStormMotion(p);
   const origin = parseStormOrigin(alert, p);
   if(!motion || !motion.speed || !origin) return;
+
   const bearing = directionToBearing(motion.direction);
   if(bearing === null) return;
 
@@ -1371,30 +1512,143 @@ function drawStormTrack(alert){
   const color = severity === "tornado-emergency" ? "#ff00ff" : severity === "tornado-warning" ? "#a855f7" : "#f97316";
   const originPoint = turf.point([origin.lng, origin.lat]);
   const minutes = [0, 15, 30, 45, 60];
-  const points = minutes.map(min => {
-    const miles = motion.speed * (min / 60);
-    const dest = turf.destination(originPoint, miles, bearing, { units:"miles" });
-    return [dest.geometry.coordinates[1], dest.geometry.coordinates[0]];
-  });
+  const points = minutes.map(min => projectPointFromOrigin(originPoint, motion.speed, bearing, min));
+
+  const majorReason = getMajorStormReason(p);
 
   L.polyline(points, {
     color,
-    weight:4,
-    opacity:.95,
-    dashArray:"10 7",
+    weight: severity === "tornado-emergency" ? 6 : 5,
+    opacity:.98,
+    dashArray:"12 8",
     className:"storm-track-line"
-  }).bindPopup(`<strong>${formatTitle(p)}</strong><br>Storm motion: ${motion.direction} at ${motion.speed} mph<br>Origin: ${origin.label}`).addTo(stormTrackLayer);
+  }).bindPopup(`
+    <strong>${formatTitle(p)}</strong><br>
+    <strong>Major track:</strong> ${majorReason}<br>
+    <strong>Motion:</strong> ${motion.direction} at ${motion.speed} mph<br>
+    <strong>Origin:</strong> ${origin.label}<br>
+    <strong>Track timing:</strong> ${buildTrackTimingText(originPoint, motion.speed, bearing)}
+  `).addTo(stormTrackLayer);
 
   L.marker(points[0], {
     icon:L.divIcon({ className:"", html:`<div class="track-origin"></div>`, iconSize:[18,18], iconAnchor:[9,9] })
   }).bindPopup(`<strong>Storm location</strong><br>${origin.label}<br>${motion.direction} at ${motion.speed} mph`).addTo(stormTrackLayer);
 
   [15,30,45,60].forEach((min, idx) => {
+    const eta = formatTime24(new Date(Date.now() + min * 60000).toISOString());
     L.marker(points[idx + 1], {
       interactive:false,
-      icon:L.divIcon({ className:"", html:`<div class="track-label">+${min} MIN</div>`, iconSize:[70,22], iconAnchor:[35,11] })
+      icon:L.divIcon({
+        className:"",
+        html:`<div class="major-track-label"><div>+${min} MIN</div><div class="eta">${eta}</div></div>`,
+        iconSize:[82,36],
+        iconAnchor:[41,18]
+      })
     }).addTo(stormTrackLayer);
   });
+
+  addMajorImpactTimingLabels(alert, origin, motion, bearing);
+}
+
+function shouldDrawMajorStormTrack(p){
+  const severity = getSeverity(p);
+  if(severity === "tornado-emergency" || severity === "tornado-warning") return true;
+
+  if(severity !== "tstorm-warning") return false;
+
+  const text = `${p.headline || ""} ${p.description || ""} ${p.instruction || ""}`.toUpperCase();
+  const params = p.parameters || {};
+  const thunderstormDamageThreat = Array.isArray(params.thunderstormDamageThreat) ? params.thunderstormDamageThreat.join(" ").toUpperCase() : "";
+  const maxWindGust = Array.isArray(params.maxWindGust) ? params.maxWindGust.join(" ").toUpperCase() : "";
+  const maxHailSize = Array.isArray(params.maxHailSize) ? params.maxHailSize.join(" ").toUpperCase() : "";
+
+  const windMatch = maxWindGust.match(/(\d+)/) || text.match(/(\d+)\s*MPH WIND/i);
+  const hailMatch = maxHailSize.match(/([0-9.]+)/) || text.match(/([0-9.]+)\s*IN(?:CH)? HAIL/i);
+  const wind = windMatch ? Number(windMatch[1]) : 0;
+  const hail = hailMatch ? Number(hailMatch[1]) : 0;
+
+  return (
+    thunderstormDamageThreat.includes("DESTRUCTIVE") ||
+    thunderstormDamageThreat.includes("CONSIDERABLE") ||
+    text.includes("DESTRUCTIVE") ||
+    text.includes("CONSIDERABLE") ||
+    wind >= 70 ||
+    hail >= 2.75
+  );
+}
+
+function getMajorStormReason(p){
+  const severity = getSeverity(p);
+  if(severity === "tornado-emergency") return "Tornado Emergency";
+  if(severity === "tornado-warning") return "Tornado Warning";
+
+  const params = p.parameters || {};
+  const threat = Array.isArray(params.thunderstormDamageThreat) ? params.thunderstormDamageThreat.join(" ") : "";
+  const wind = Array.isArray(params.maxWindGust) ? params.maxWindGust.join(" ") : "";
+  const hail = Array.isArray(params.maxHailSize) ? params.maxHailSize.join(" ") : "";
+
+  const pieces = [];
+  if(threat) pieces.push(`${threat} damage threat`);
+  if(wind) pieces.push(`Wind ${wind}`);
+  if(hail) pieces.push(`Hail ${hail}`);
+  return pieces.length ? pieces.join(" / ") : "High-end Severe Thunderstorm Warning";
+}
+
+function projectPointFromOrigin(originPoint, speedMph, bearing, minutes){
+  const miles = speedMph * (minutes / 60);
+  const dest = turf.destination(originPoint, miles, bearing, { units:"miles" });
+  return [dest.geometry.coordinates[1], dest.geometry.coordinates[0]];
+}
+
+function buildTrackTimingText(originPoint, speedMph, bearing){
+  return [15,30,45,60].map(min => {
+    return `+${min} min ${formatTime24(new Date(Date.now() + min * 60000).toISOString())}`;
+  }).join(" | ");
+}
+
+function addMajorImpactTimingLabels(alert, origin, motion, bearing){
+  const candidates = [...stations, ...towns, ...locations]
+    .filter(item => item.lat !== undefined && item.lng !== undefined)
+    .map(item => {
+      const impact = calculateTrackImpactMinutes(origin, item, motion.speed, bearing);
+      return { item, ...impact };
+    })
+    .filter(row => row.isForward && row.crossTrackMiles <= 8 && row.minutes >= -2 && row.minutes <= 75)
+    .sort((a,b) => a.minutes - b.minutes)
+    .slice(0, 12);
+
+  candidates.forEach(row => {
+    const eta = row.minutes <= 3 ? "NOW" : formatTime24(new Date(Date.now() + row.minutes * 60000).toISOString());
+    const label = row.minutes <= 3 ? `${row.item.name} NOW` : `${row.item.name} ${eta}`;
+
+    L.marker([row.item.lat, row.item.lng], {
+      interactive:false,
+      icon:L.divIcon({
+        className:"",
+        html:`<div class="major-impact-label">${label}</div>`,
+        iconSize:[130,24],
+        iconAnchor:[65,12]
+      })
+    }).addTo(stormTrackLayer);
+  });
+}
+
+function calculateTrackImpactMinutes(origin, point, speedMph, bearing){
+  const originPoint = turf.point([origin.lng, origin.lat]);
+  const targetPoint = turf.point([point.lng, point.lat]);
+  const distanceMiles = turf.distance(originPoint, targetPoint, { units:"miles" });
+  const targetBearing = turf.bearing(originPoint, targetPoint);
+  const diffDeg = Math.abs(((targetBearing - bearing + 540) % 360) - 180);
+  const diffRad = diffDeg * Math.PI / 180;
+  const alongTrackMiles = distanceMiles * Math.cos(diffRad);
+  const crossTrackMiles = Math.abs(distanceMiles * Math.sin(diffRad));
+
+  return {
+    isForward: alongTrackMiles >= -1,
+    crossTrackMiles,
+    alongTrackMiles,
+    minutes: Math.round((alongTrackMiles / speedMph) * 60)
+  };
 }
 
 function pointForwardOfStorm(origin, point, bearing){
@@ -1413,14 +1667,17 @@ function estimateImpactTime(alert, point, motion, stormOrigin){
     const origin = stormOrigin || parseStormOrigin(alert, alert.properties || {});
     if(!origin) return "Timing not available";
 
-    const target = turf.point([point.lng, point.lat]);
-    const originPoint = turf.point([origin.lng, origin.lat]);
-    const miles = turf.distance(originPoint, target, { units:"miles" });
-    const minutes = Math.round((miles / motion.speed) * 60);
+    const impact = calculateTrackImpactMinutes(origin, point, motion.speed, bearing);
 
-    if(!pointForwardOfStorm(origin, point, bearing)){
+    if(!impact.isForward){
+      return "Behind storm / timing uncertain";
+    }
+
+    if(impact.crossTrackMiles > 12){
       return "Near alert area / timing uncertain";
     }
+
+    const minutes = impact.minutes;
 
     if(minutes <= 3) return "Now";
     if(minutes > 120) return "2+ hr";
@@ -1726,7 +1983,7 @@ loadOutlookData();
 setInterval(loadOutlookData, 10 * 60 * 1000);
 setInterval(updateRefreshCountdown, 1000);
 setInterval(loadTempestConditions, 60000);
-</script>
 
+</script>
 </body>
 </html>
