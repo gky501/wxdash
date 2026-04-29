@@ -401,7 +401,7 @@ header{
   <div class="zone normal" data-zone="cabot"><button class="zone-btn" onclick="openZoneDetail('cabot')">CABOT</button></div>
   <div class="zone normal" data-zone="lonoke"><button class="zone-btn" onclick="openZoneDetail('lonoke')">LONOKE CO</button></div>
   <div class="zone normal" data-zone="sheridan"><button class="zone-btn" onclick="openZoneDetail('sheridan')">SHERIDAN</button></div>
-  <div class="zone normal" data-zone="grant"><button class="zone-btn" onclick="openZoneDetail('grant')">GRANT CO</button></div>
+  <div class="zone normal" data-zone="arch-st"><button class="zone-btn" onclick="openZoneDetail('arch-st')">ARCH ST</button></div>
 </div>
 
 <div class="layout">
@@ -502,18 +502,18 @@ map.on("mousemove dragstart zoomstart movestart", function(){
 });
 
 const stations = [
-  { name:"Station 1", area:"Little Rock", zone:["little-rock"], lat:34.7433819, lng:-92.2843613 },
-  { name:"Station 3", area:"Little Rock", zone:["little-rock"], lat:34.6690390, lng:-92.3581024 },
-  { name:"Station 4", area:"Little Rock / NLR", zone:["little-rock","nlr"], lat:34.7593041, lng:-92.3802302 },
-  { name:"Station 10", area:"Little Rock", zone:["little-rock"], lat:34.7991817, lng:-92.4554265 },
-  { name:"Cabot Station", area:"Cabot / Lonoke County", zone:["cabot","lonoke"], lat:34.9732158, lng:-92.0171126 },
-  { name:"Gravel Ridge Station", area:"NLR / Sherwood", zone:["nlr","sherwood"], lat:34.8686392, lng:-92.1978871 },
-  { name:"Maumelle Station", area:"Maumelle", zone:["maumelle"], lat:34.8569051, lng:-92.4070432 },
-  { name:"MEMS North", area:"Little Rock / NLR", zone:["little-rock","nlr"], lat:34.7812027, lng:-92.2743301 },
-  { name:"North Pulaski Station", area:"North Pulaski / Sherwood", zone:["nlr","sherwood"], lat:34.9403325, lng:-92.1683398 },
-  { name:"Sheridan Station", area:"Sheridan / Grant County", zone:["sheridan","grant"], lat:34.3170329, lng:-92.3955182 },
-  { name:"Sherwood Station", area:"Sherwood", zone:["sherwood"], lat:34.8319372, lng:-92.2078739 },
-  { name:"Arch St Station", area:"South Pulaski / Grant County", zone:["sheridan","grant"], lat:34.6174833, lng:-92.3157304 }
+  { name:"Station 1", area:"Little Rock", zone:["little-rock"], countyCodes:["ARC119"], lat:34.7433819, lng:-92.2843613 },
+  { name:"Station 3", area:"Little Rock", zone:["little-rock"], countyCodes:["ARC119"], lat:34.6690390, lng:-92.3581024 },
+  { name:"Station 4", area:"Little Rock / NLR", zone:["little-rock","nlr"], countyCodes:["ARC119"], lat:34.7593041, lng:-92.3802302 },
+  { name:"Station 10", area:"Little Rock", zone:["little-rock"], countyCodes:["ARC119"], lat:34.7991817, lng:-92.4554265 },
+  { name:"Cabot Station", area:"Cabot / Lonoke County", zone:["cabot","lonoke"], countyCodes:["ARC085"], lat:34.9732158, lng:-92.0171126 },
+  { name:"Gravel Ridge Station", area:"NLR / Sherwood", zone:["nlr","sherwood"], countyCodes:["ARC119"], lat:34.8686392, lng:-92.1978871 },
+  { name:"Maumelle Station", area:"Maumelle", zone:["maumelle"], countyCodes:["ARC119"], lat:34.8569051, lng:-92.4070432 },
+  { name:"MEMS North", area:"Little Rock / NLR", zone:["little-rock","nlr"], countyCodes:["ARC119"], lat:34.7812027, lng:-92.2743301 },
+  { name:"North Pulaski Station", area:"North Pulaski / Sherwood", zone:["nlr","sherwood"], countyCodes:["ARC119"], lat:34.9403325, lng:-92.1683398 },
+  { name:"Sheridan Station", area:"Sheridan / Grant County", zone:["sheridan"], countyCodes:["ARC053"], lat:34.3170329, lng:-92.3955182 },
+  { name:"Sherwood Station", area:"Sherwood", zone:["sherwood"], countyCodes:["ARC119"], lat:34.8319372, lng:-92.2078739 },
+  { name:"Arch St Station", area:"South Pulaski / Grant County", zone:["arch-st"], countyCodes:["ARC119"], lat:34.6174833, lng:-92.3157304 }
 ];
 
 const locations = [
@@ -544,55 +544,63 @@ const locations = [
 ];
 
 const towns = [
-  { name:"Little Rock", zone:["little-rock"], lat:34.7465, lng:-92.2896 },
-  { name:"North Little Rock", zone:["nlr"], lat:34.7695, lng:-92.2671 },
-  { name:"Maumelle", zone:["maumelle"], lat:34.8668, lng:-92.4043 },
-  { name:"Sherwood", zone:["sherwood"], lat:34.8151, lng:-92.2243 },
-  { name:"Cabot", zone:["cabot","lonoke"], lat:34.9745, lng:-92.0165 },
-  { name:"Lonoke", zone:["lonoke"], lat:34.7839, lng:-91.8999 },
-  { name:"Sheridan", zone:["sheridan","grant"], lat:34.3070, lng:-92.4013 }
+  { name:"Little Rock", zone:["little-rock"], countyCodes:["ARC119"], lat:34.7465, lng:-92.2896 },
+  { name:"North Little Rock", zone:["nlr"], countyCodes:["ARC119"], lat:34.7695, lng:-92.2671 },
+  { name:"Maumelle", zone:["maumelle"], countyCodes:["ARC119"], lat:34.8668, lng:-92.4043 },
+  { name:"Sherwood", zone:["sherwood"], countyCodes:["ARC119"], lat:34.8151, lng:-92.2243 },
+  { name:"Cabot", zone:["cabot","lonoke"], countyCodes:["ARC085"], lat:34.9745, lng:-92.0165 },
+  { name:"Lonoke", zone:["lonoke"], countyCodes:["ARC085"], lat:34.7839, lng:-91.8999 },
+  { name:"Sheridan", zone:["sheridan"], countyCodes:["ARC053"], lat:34.3070, lng:-92.4013 }
 ];
 
 const zoneProfiles = {
   "little-rock": {
     title:"Little Rock",
+    countyCodes:["ARC119"],
     center:[34.7465, -92.2896],
     stations:["Station 1","Station 3","Station 4","Station 10","MEMS North"]
   },
   "nlr": {
     title:"North Little Rock",
+    countyCodes:["ARC119"],
     center:[34.7695, -92.2671],
     stations:["Station 4","MEMS North","Gravel Ridge Station","North Pulaski Station"]
   },
   "maumelle": {
     title:"Maumelle",
+    countyCodes:["ARC119"],
     center:[34.8668, -92.4043],
     stations:["Maumelle Station"]
   },
   "sherwood": {
     title:"Sherwood",
+    countyCodes:["ARC119"],
     center:[34.8151, -92.2243],
     stations:["Sherwood Station","Gravel Ridge Station","North Pulaski Station"]
   },
   "cabot": {
     title:"Cabot",
+    countyCodes:["ARC085"],
     center:[34.9745, -92.0165],
     stations:["Cabot Station"]
   },
   "lonoke": {
     title:"Lonoke County",
+    countyCodes:["ARC085"],
     center:[34.7839, -91.8999],
     stations:["Cabot Station"]
   },
   "sheridan": {
     title:"Sheridan",
+    countyCodes:["ARC053"],
     center:[34.3070, -92.4013],
     stations:["Sheridan Station","Arch St Station"]
   },
-  "grant": {
-    title:"Grant County",
-    center:[34.2900, -92.4200],
-    stations:["Sheridan Station","Arch St Station"]
+  "arch-st": {
+    title:"Arch Street",
+    countyCodes:["ARC119"],
+    center:[34.6175, -92.3157],
+    stations:["Arch St Station"]
   }
 };
 
@@ -1076,44 +1084,48 @@ function buildAlertDetail(alert){
   const motion = parseStormMotion(p);
   const affectedStations = [];
   const affectedTowns = [];
-  const alertAreaNames = extractAreaNames(p.areaDesc);
   const affectedPOI = [];
+  const bulletinAreas = extractImpactedAreasFromBulletin(p);
+  const alertUgcCodes = getAlertUgcCodes(p);
 
   if(alert.geometry){
     stations.forEach(station => {
-      if(turf.booleanPointInPolygon(turf.point([station.lng, station.lat]), alert)) affectedStations.push(station);
-    });
-
-    alertAreaNames.forEach(areaName => {
-      const matchedTown = towns.find(t => t.name.toLowerCase() === areaName.toLowerCase());
-      if(matchedTown){
-        if(turf.booleanPointInPolygon(turf.point([matchedTown.lng, matchedTown.lat]), alert)) affectedTowns.push(matchedTown);
-      }else{
-        affectedTowns.push({ name:areaName, zone:[] });
-      }
+      if(pointInsideAlert(alert, station)) affectedStations.push(station);
     });
 
     locations.forEach(location => {
-      if(turf.booleanPointInPolygon(turf.point([location.lng, location.lat]), alert)) affectedPOI.push(location);
+      if(pointInsideAlert(alert, location)) affectedPOI.push(location);
+    });
+
+    /*
+      Popup "Areas Impacted" should come from the NWS bulletin language,
+      not from the polygon overlay or map lookup. This keeps the popup
+      aligned with what NWS actually wrote in the warning.
+    */
+    bulletinAreas.forEach(name => {
+      const matchedTown = towns.find(t => normalizeName(t.name) === normalizeName(name));
+      if(matchedTown){
+        affectedTowns.push(matchedTown);
+      }else{
+        affectedTowns.push({ name, zone:[], impact:"Timing not available" });
+      }
     });
   }else{
-    const area = p.areaDesc || "";
-
+    /*
+      Watches usually do not include polygons.
+      Use NWS UGC county codes first, with a conservative areaDesc fallback.
+      This prevents Pulaski/Lonoke watches from lighting up Sheridan/Grant.
+    */
     stations.forEach(station => {
-      if(areaLooksRelevantToStation(area, station)) affectedStations.push(station);
+      if(itemMatchesAlertUgc(station, alertUgcCodes, p.areaDesc)) affectedStations.push(station);
     });
 
-    alertAreaNames.forEach(areaName => {
-      const matchedTown = towns.find(t => t.name.toLowerCase() === areaName.toLowerCase());
-      if(matchedTown && areaLooksRelevantToTown(area, matchedTown)){
-        affectedTowns.push(matchedTown);
-      }else if(!matchedTown){
-        affectedTowns.push({ name:areaName, zone:[] });
-      }
+    towns.forEach(town => {
+      if(itemMatchesAlertUgc(town, alertUgcCodes, p.areaDesc)) affectedTowns.push(town);
     });
 
     locations.forEach(location => {
-      if(areaLooksRelevantToPOI(area, location)) affectedPOI.push(location);
+      if(areaLooksRelevantToPOI(p.areaDesc || "", location)) affectedPOI.push(location);
     });
   }
 
@@ -1125,9 +1137,10 @@ function buildAlertDetail(alert){
     expires:p.expires,
     areaDesc:p.areaDesc || "",
     motion,
-    affectedStations:affectedStations.map(s => ({...s, impact:estimateImpactTime(alert, s, motion)})),
-    affectedTowns:affectedTowns.map(t => ({...t, impact:(t.lat !== undefined && t.lng !== undefined) ? estimateImpactTime(alert, t, motion) : "Timing not available"})),
-    affectedPOI:affectedPOI.map(poi => ({...poi, impact:estimateImpactTime(alert, poi, motion)})),
+    affectedStations:dedupeByName(affectedStations).map(s => ({...s, impact:estimateImpactTime(alert, s, motion)})),
+    affectedTowns:dedupeByName(affectedTowns).map(t => ({...t, impact:(t.lat !== undefined && t.lng !== undefined) ? estimateImpactTime(alert, t, motion) : (t.impact || "Timing not available")})),
+    affectedPOI:dedupeByName(affectedPOI).map(poi => ({...poi, impact:estimateImpactTime(alert, poi, motion)})),
+    impactedAreas:bulletinAreas,
     description:p.description || "",
     instruction:p.instruction || "",
     geometry:alert.geometry || null
@@ -1144,25 +1157,87 @@ function formatAffectedStations(stationsHit){
     .join("");
 }
 
-function areaLooksRelevantToStation(area, station){
-  const a = area.toLowerCase();
-  return station.zone.some(z => {
-    if(["little-rock","nlr","maumelle","sherwood"].includes(z)) return a.includes("pulaski");
-    if(["cabot","lonoke"].includes(z)) return a.includes("lonoke");
-    if(["sheridan","grant"].includes(z)) return a.includes("grant");
+function getAlertUgcCodes(p){
+  const ugc = p.geocode && Array.isArray(p.geocode.UGC) ? p.geocode.UGC : [];
+  return ugc.map(code => String(code).toUpperCase());
+}
+
+function itemMatchesAlertUgc(item, alertUgcCodes, areaDesc){
+  const itemCodes = Array.isArray(item.countyCodes) ? item.countyCodes.map(c => String(c).toUpperCase()) : [];
+
+  if(alertUgcCodes.length && itemCodes.length){
+    return itemCodes.some(code => alertUgcCodes.includes(code));
+  }
+
+  const area = String(areaDesc || "").toLowerCase();
+  if(itemCodes.includes("ARC119")) return area.includes("pulaski");
+  if(itemCodes.includes("ARC085")) return area.includes("lonoke");
+  if(itemCodes.includes("ARC053")) return area.includes("grant");
+  return false;
+}
+
+function pointInsideAlert(alert, point){
+  try{
+    return !!alert.geometry && turf.booleanPointInPolygon(turf.point([point.lng, point.lat]), alert);
+  }catch(e){
     return false;
+  }
+}
+
+function normalizeName(value){
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function dedupeByName(items){
+  const seen = new Set();
+  return items.filter(item => {
+    const key = normalizeName(item.name);
+    if(!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 
-function areaLooksRelevantToTown(area, town){
-  const a = area.toLowerCase();
-  return town.zone.some(z => {
-    if(["little-rock","nlr","maumelle","sherwood"].includes(z)) return a.includes("pulaski");
-    if(["cabot","lonoke"].includes(z)) return a.includes("lonoke");
-    if(["sheridan","grant"].includes(z)) return a.includes("grant");
-    return false;
+function extractImpactedAreasFromBulletin(p){
+  const text = String(p.description || "").replace(/\r/g, "");
+  const results = [];
+
+  const patterns = [
+    /Locations impacted include\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i,
+    /Other locations impacted by this severe thunderstorm include\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i,
+    /The tornado will be near\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i
+  ];
+
+  patterns.forEach(pattern => {
+    const match = text.match(pattern);
+    if(match && match[1]){
+      results.push(...splitBulletinPlaceList(match[1]));
+    }
   });
+
+  return [...new Set(results.map(cleanBulletinPlace).filter(Boolean))];
 }
+
+function splitBulletinPlaceList(block){
+  return String(block || "")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .split(/,|;| and /i)
+    .map(cleanBulletinPlace)
+    .filter(Boolean);
+}
+
+function cleanBulletinPlace(value){
+  return String(value || "")
+    .replace(/\b(around|near|including|mainly|about|between|after|before)\b/ig, "")
+    .replace(/\b\d{1,2}:\d{2}\s*(?:AM|PM)?\b/ig, "")
+    .replace(/\b\d{1,2}\s*(?:AM|PM)\b/ig, "")
+    .replace(/\b(by|at)\s*\d{1,2}\s*(?:AM|PM)?\b/ig, "")
+    .replace(/\.$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 
 function areaLooksRelevantToPOI(area, location){
   const a = area.toLowerCase();
@@ -1280,7 +1355,7 @@ function openDetail(detail){
   const townItems = formatCondensedAlphabetizedList(
     detail.affectedTowns,
     t => `${t.name} <strong>(${t.impact})</strong>`,
-    "No affected towns listed for this alert area."
+    "No impacted areas were listed in the NWS bulletin."
   );
 
   const locationItems = formatLocationsByType(detail.affectedPOI);
@@ -1292,7 +1367,7 @@ function openDetail(detail){
     </div>
 
     <div class="detail-section">
-      <strong>Affected Towns</strong>
+      <strong>Areas Impacted</strong>
       <ul class="detail-list" id="affectedTownsList">${townItems}</ul>
     </div>
 
@@ -1308,7 +1383,8 @@ function openDetail(detail){
   `;
 
   document.getElementById("detailOverlay").style.display = "flex";
-  hydrateAffectedTowns(detail);
+  // Areas Impacted is intentionally pulled from the NWS bulletin, not the polygon overlay.
+
 }
 
 async function hydrateAffectedTowns(detail){
@@ -1318,7 +1394,7 @@ async function hydrateAffectedTowns(detail){
     return;
   }
 
-  listEl.innerHTML = "<li>Loading towns/cities/townships from warning polygon…</li>";
+  listEl.innerHTML = "<li>Loading impacted areas from NWS bulletin…</li>";
 
   try{
     const names = await fetchPlacesInPolygon(detail.geometry);
