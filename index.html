@@ -1118,7 +1118,8 @@ function buildAlertDetail(alert){
     affectedTowns:affectedTowns.map(t => ({...t, impact:estimateImpactTime(alert, t, motion)})),
     affectedPOI:affectedPOI.map(poi => ({...poi, impact:estimateImpactTime(alert, poi, motion)})),
     description:p.description || "",
-    instruction:p.instruction || ""
+    instruction:p.instruction || "",
+    geometry:alert.geometry || null
   };
 }
 
@@ -1270,7 +1271,7 @@ function openDetail(detail){
 
     <div class="detail-section">
       <strong>Affected Towns</strong>
-      <ul class="detail-list">${townItems}</ul>
+      <ul class="detail-list" id="affectedTownsList">${townItems}</ul>
     </div>
 
     <div class="detail-section">
@@ -1285,7 +1286,61 @@ function openDetail(detail){
   `;
 
   document.getElementById("detailOverlay").style.display = "flex";
+  hydrateAffectedTowns(detail);
 }
+
+async function hydrateAffectedTowns(detail){
+  const listEl = document.getElementById("affectedTownsList");
+  if(!listEl) return;
+  if(!detail.geometry){
+    return;
+  }
+
+  listEl.innerHTML = "<li>Loading towns/cities/townships from warning polygon…</li>";
+
+  try{
+    const names = await fetchPlacesInPolygon(detail.geometry);
+    if(!names.length){
+      listEl.innerHTML = "<li>No towns/cities/townships found inside this alert polygon.</li>";
+      return;
+    }
+
+    listEl.innerHTML = names
+      .sort((a,b) => a.localeCompare(b))
+      .map(name => `<li>${name}</li>`)
+      .join("");
+  }catch(err){
+    console.warn("Unable to load polygon places", err);
+    listEl.innerHTML = "<li>Unable to load dynamic towns for this polygon.</li>";
+  }
+}
+
+async function fetchPlacesInPolygon(geometry){
+  const rings = geometry.type === "Polygon" ? [geometry.coordinates[0]] : geometry.coordinates[0].map(poly => poly[0]).filter(Boolean);
+  if(!rings.length) return [];
+
+  const queries = rings.map(ring => {
+    const samples = ring.filter((_, idx) => idx % 2 === 0).slice(0, 120);
+    const poly = samples.map(coord => `${coord[1]} ${coord[0]}`).join(" ");
+    return `nwr["place"~"city|town|village|hamlet|suburb|quarter|neighbourhood"](poly:"${poly}");`;
+  }).join("\n");
+
+  const overpassQuery = `[out:json][timeout:25];(\n${queries}\n);out tags;`;
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=UTF-8"},
+    body:overpassQuery
+  });
+
+  if(!res.ok) throw new Error("Overpass request failed: " + res.status);
+  const data = await res.json();
+  const names = (data.elements || [])
+    .map(el => el.tags && (el.tags.name || el.tags["name:en"]))
+    .filter(Boolean);
+
+  return [...new Set(names)];
+}
+
 
 
 function formatCondensedAlphabetizedList(items, renderItem, emptyMessage){
