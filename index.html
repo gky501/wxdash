@@ -15,6 +15,7 @@
   --dark:#080808;
   --panel:#111;
   --blue:#005bea;
+  --mems-orange:#f47b26;
 }
 
 *{box-sizing:border-box;}
@@ -66,11 +67,11 @@ header{
 .zone{
   flex:1;
   text-align:center;
-  padding:10px 6px;
   font-weight:900;
   font-size:13px;
   color:white;
   border-right:1px solid rgba(255,255,255,.25);
+  padding:0;
 }
 
 .zone.normal{background:var(--green);}
@@ -81,6 +82,21 @@ header{
 .zone.tornado-emergency{
   background:linear-gradient(90deg,var(--red),var(--purple));
   animation:pulseEmergency 1s infinite;
+}
+
+.zone-btn{
+  width:100%;
+  height:100%;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.zone-btn:hover{
+  background:rgba(255,255,255,.16);
 }
 
 .layout{
@@ -183,7 +199,15 @@ header{
   gap:10px;
   padding:10px 12px;
   background:linear-gradient(90deg,#000,#111);
-  border-top:3px solid #f47b26;
+  border-top:3px solid var(--mems-orange);
+}
+
+.conditions-title,
+.condition-card{
+  border-radius:10px;
+  background:#171717;
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
 }
 
 .conditions-title{
@@ -191,13 +215,11 @@ header{
   flex-direction:column;
   justify-content:center;
   padding:10px;
-  border-radius:10px;
   background:#050505;
-  border:1px solid rgba(255,255,255,.12);
 }
 
 .conditions-title span:first-child{
-  color:#f47b26;
+  color:var(--mems-orange);
   font-size:12px;
   font-weight:900;
   letter-spacing:.12em;
@@ -214,10 +236,6 @@ header{
   flex-direction:column;
   justify-content:center;
   padding:10px 12px;
-  border-radius:10px;
-  background:#171717;
-  border:1px solid rgba(255,255,255,.12);
-  box-shadow:0 4px 14px rgba(0,0,0,.3);
 }
 
 .condition-card .label{
@@ -273,8 +291,8 @@ header{
 }
 
 .detail-card{
-  width:min(760px,92vw);
-  max-height:85vh;
+  width:min(860px,92vw);
+  max-height:88vh;
   overflow-y:auto;
   background:#101010;
   border:1px solid rgba(255,255,255,.2);
@@ -343,14 +361,14 @@ header{
 </header>
 
 <div class="top-bar">
-  <div class="zone normal" data-zone="little-rock">LITTLE ROCK</div>
-  <div class="zone normal" data-zone="nlr">NLR</div>
-  <div class="zone normal" data-zone="maumelle">MAUMELLE</div>
-  <div class="zone normal" data-zone="sherwood">SHERWOOD</div>
-  <div class="zone normal" data-zone="cabot">CABOT</div>
-  <div class="zone normal" data-zone="lonoke">LONOKE CO</div>
-  <div class="zone normal" data-zone="sheridan">SHERIDAN</div>
-  <div class="zone normal" data-zone="grant">GRANT CO</div>
+  <div class="zone normal" data-zone="little-rock"><button class="zone-btn" onclick="openZoneDetail('little-rock')">LITTLE ROCK</button></div>
+  <div class="zone normal" data-zone="nlr"><button class="zone-btn" onclick="openZoneDetail('nlr')">NLR</button></div>
+  <div class="zone normal" data-zone="maumelle"><button class="zone-btn" onclick="openZoneDetail('maumelle')">MAUMELLE</button></div>
+  <div class="zone normal" data-zone="sherwood"><button class="zone-btn" onclick="openZoneDetail('sherwood')">SHERWOOD</button></div>
+  <div class="zone normal" data-zone="cabot"><button class="zone-btn" onclick="openZoneDetail('cabot')">CABOT</button></div>
+  <div class="zone normal" data-zone="lonoke"><button class="zone-btn" onclick="openZoneDetail('lonoke')">LONOKE CO</button></div>
+  <div class="zone normal" data-zone="sheridan"><button class="zone-btn" onclick="openZoneDetail('sheridan')">SHERIDAN</button></div>
+  <div class="zone normal" data-zone="grant"><button class="zone-btn" onclick="openZoneDetail('grant')">GRANT CO</button></div>
 </div>
 
 <div class="layout">
@@ -423,6 +441,14 @@ const USER_ACTIVITY_HOLD_MS = 5 * 60 * 1000;
 let secondsUntilRefresh = REFRESH_SECONDS;
 let lastUserMapActivity = 0;
 let latestPanelAlerts = [];
+let latestAllArkansasAlerts = [];
+
+let outlookData = {
+  tornado:null,
+  hail:null,
+  wind:null,
+  excessiveRain:null
+};
 
 const AR_BOUNDS = L.latLngBounds([33.00, -94.75], [36.65, -89.55]);
 const AR_CENTER = [34.75, -92.25];
@@ -462,25 +488,25 @@ const areasOfInterest = [
   { name:"Clinton Nat. Airport", area:"Little Rock", lat:34.7284011058131, lng:-92.22039216234353, radius:"1 mile" },
   { name:"Wrightsville Correctional Unit", area:"Wrightsville", lat:34.60194061960711, lng:-92.19260013773142, radius:".25 miles" },
   { name:"LR Air Force Base", area:"Jacksonville", lat:34.90639838445616, lng:-92.14395233018587, radius:"1 mile" },
-  { name:"LR Veterans Hospital", area:"Little Rock", lat:34.746267149080055, lng:-92.32047667930003 },
+  { name:"LR Veterans Hospital", area:"Little Rock", lat:34.746267149080055, lng:-92.32047667930003, radius:"1 mile" },
   { name:"UAMS", area:"Little Rock", lat:34.74744666257331, lng:-92.32088969840527, radius:".25 miles" },
-  { name:"St. Vincent Infirmary", area:"Little Rock", lat:34.75033284961561, lng:-92.33940377918991 },
+  { name:"St. Vincent Infirmary", area:"Little Rock", lat:34.75033284961561, lng:-92.33940377918991, radius:"1 mile" },
   { name:"Baptist Med Center LR", area:"Little Rock", lat:34.74480435362505, lng:-92.38089211015347, radius:".25 miles" },
-  { name:"Arkansas Heart Hospital", area:"Little Rock", lat:34.73922859302091, lng:-92.39358428834757 },
-  { name:"Arkansas Childrens", area:"Little Rock", lat:34.74198874170889, lng:-92.29300715213085 },
-  { name:"Saline Memorial", area:"Benton", lat:34.57494971990144, lng:-92.59375497712537 },
-  { name:"Baptist Springhill", area:"North Little Rock", lat:34.78394874277726, lng:-92.22312924338553 },
-  { name:"SVI North", area:"Sherwood", lat:34.81344283040206, lng:-92.20907267741393 },
-  { name:"Unity Jacksonville", area:"Jacksonville", lat:34.87316535170868, lng:-92.12534698787888 },
-  { name:"Cabot Emergency Hospital", area:"Cabot", lat:34.98186175242931, lng:-92.03483579161522 },
-  { name:"Unity Searcy", area:"Searcy", lat:35.2519019242663, lng:-91.69724613374575 },
-  { name:"Baptist Hot Spring County", area:"Malvern", lat:34.358715333160184, lng:-92.78587668356282 },
-  { name:"Jefferson Regional", area:"Pine Bluff", lat:34.18816847629358, lng:-92.0175729276134 },
-  { name:"Camp Robinson Gate", area:"North Little Rock", lat:34.814341913579206, lng:-92.29026940852049 },
+  { name:"Arkansas Heart Hospital", area:"Little Rock", lat:34.73922859302091, lng:-92.39358428834757, radius:"1 mile" },
+  { name:"Arkansas Childrens", area:"Little Rock", lat:34.74198874170889, lng:-92.29300715213085, radius:"1 mile" },
+  { name:"Saline Memorial", area:"Benton", lat:34.57494971990144, lng:-92.59375497712537, radius:"1 mile" },
+  { name:"Baptist Springhill", area:"North Little Rock", lat:34.78394874277726, lng:-92.22312924338553, radius:"1 mile" },
+  { name:"SVI North", area:"Sherwood", lat:34.81344283040206, lng:-92.20907267741393, radius:"1 mile" },
+  { name:"Unity Jacksonville", area:"Jacksonville", lat:34.87316535170868, lng:-92.12534698787888, radius:"1 mile" },
+  { name:"Cabot Emergency Hospital", area:"Cabot", lat:34.98186175242931, lng:-92.03483579161522, radius:"1 mile" },
+  { name:"Unity Searcy", area:"Searcy", lat:35.2519019242663, lng:-91.69724613374575, radius:"1 mile" },
+  { name:"Baptist Hot Spring County", area:"Malvern", lat:34.358715333160184, lng:-92.78587668356282, radius:"1 mile" },
+  { name:"Jefferson Regional", area:"Pine Bluff", lat:34.18816847629358, lng:-92.0175729276134, radius:"1 mile" },
+  { name:"Camp Robinson Gate", area:"North Little Rock", lat:34.814341913579206, lng:-92.29026940852049, radius:"1 mile" },
   { name:"Camp Robinson Air Field", area:"North Little Rock", lat:34.843067898247455, lng:-92.30758595632308, radius:".5 miles" },
   { name:"NLR Airport", area:"North Little Rock", lat:34.83274690489968, lng:-92.25665331558987, radius:".5 miles" },
-  { name:"Conway Regional Medical Center", area:"Conway", lat:35.0855885850444, lng:-92.45778239317336 },
-  { name:"Baptist Conway", area:"Conway", lat:35.0561499713529, lng:-92.41939841750165 },
+  { name:"Conway Regional Medical Center", area:"Conway", lat:35.0855885850444, lng:-92.45778239317336, radius:"1 mile" },
+  { name:"Baptist Conway", area:"Conway", lat:35.0561499713529, lng:-92.41939841750165, radius:"1 mile" },
   { name:"Pinnacle MTN", area:"Little Rock", lat:34.84164634982719, lng:-92.48591891234585, radius:".5 miles" }
 ];
 
@@ -493,6 +519,49 @@ const towns = [
   { name:"Lonoke", zone:["lonoke"], lat:34.7839, lng:-91.8999 },
   { name:"Sheridan", zone:["sheridan","grant"], lat:34.3070, lng:-92.4013 }
 ];
+
+const zoneProfiles = {
+  "little-rock": {
+    title:"Little Rock",
+    center:[34.7465, -92.2896],
+    stations:["Station 1","Station 3","Station 4","Station 10","MEMS North"]
+  },
+  "nlr": {
+    title:"North Little Rock",
+    center:[34.7695, -92.2671],
+    stations:["Station 4","MEMS North","Gravel Ridge Station","North Pulaski Station"]
+  },
+  "maumelle": {
+    title:"Maumelle",
+    center:[34.8668, -92.4043],
+    stations:["Maumelle Station"]
+  },
+  "sherwood": {
+    title:"Sherwood",
+    center:[34.8151, -92.2243],
+    stations:["Sherwood Station","Gravel Ridge Station","North Pulaski Station"]
+  },
+  "cabot": {
+    title:"Cabot",
+    center:[34.9745, -92.0165],
+    stations:["Cabot Station"]
+  },
+  "lonoke": {
+    title:"Lonoke County",
+    center:[34.7839, -91.8999],
+    stations:["Cabot Station"]
+  },
+  "sheridan": {
+    title:"Sheridan",
+    center:[34.3070, -92.4013],
+    stations:["Sheridan Station","Arch St Station"]
+  },
+  "grant": {
+    title:"Grant County",
+    center:[34.2900, -92.4200],
+    stations:["Sheridan Station","Arch St Station"]
+  }
+};
 
 const stationLayer = L.layerGroup().addTo(map);
 const poiLayer = L.layerGroup().addTo(map);
@@ -615,36 +684,24 @@ async function loadTempestConditions(){
   }
 }
 
-function updateConditionCardClasses(gustMph, lightningMiles, ageSec){
-  const windCard = document.getElementById("windCard");
-  const lightningCard = document.getElementById("lightningCard");
-  const updatedCard = document.getElementById("updatedCard");
+async function loadOutlookData(){
+  const endpoints = {
+    tornado:"https://www.spc.noaa.gov/products/outlook/day1probotlk_torn.lyr.geojson",
+    hail:"https://www.spc.noaa.gov/products/outlook/day1probotlk_hail.lyr.geojson",
+    wind:"https://www.spc.noaa.gov/products/outlook/day1probotlk_wind.lyr.geojson",
+    excessiveRain:"https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
+  };
 
-  windCard.className = "condition-card wind";
-  lightningCard.className = "condition-card lightning";
-  updatedCard.className = "condition-card updated";
-
-  if(gustMph >= 50) windCard.classList.add("warn");
-  else if(gustMph >= 35) windCard.classList.add("caution");
-
-  if(lightningMiles !== null && lightningMiles <= 10) lightningCard.classList.add("lightning-near");
-  else if(lightningMiles !== null && lightningMiles <= 20) lightningCard.classList.add("caution");
-
-  if(ageSec !== null && ageSec > 180) updatedCard.classList.add("warn");
-  else if(ageSec !== null && ageSec > 90) updatedCard.classList.add("caution");
-}
-
-function setTempestUnavailable(reason){
-  document.getElementById("tempValue").textContent = "--°";
-  document.getElementById("humidityValue").textContent = reason;
-  document.getElementById("rainValue").textContent = "--";
-  document.getElementById("rainRateValue").textContent = "Rate --";
-  document.getElementById("windValue").textContent = "--G--";
-  document.getElementById("windSubValue").textContent = "Direction --";
-  document.getElementById("lightningValue").textContent = "--";
-  document.getElementById("lightningSubValue").textContent = "Unavailable";
-  document.getElementById("tempestUpdatedValue").textContent = "--:--";
-  document.getElementById("tempestAgeValue").textContent = "Tempest unavailable";
+  for(const key in endpoints){
+    try{
+      const res = await fetch(endpoints[key]);
+      if(!res.ok) throw new Error(key + " failed");
+      outlookData[key] = await res.json();
+    }catch(err){
+      console.warn("Outlook load failed:", key, err);
+      outlookData[key] = null;
+    }
+  }
 }
 
 async function loadAlerts(){
@@ -672,6 +729,8 @@ async function loadAlerts(){
     const allArkansasAlerts = data.features
       .filter(isArkansasRelevantAlert)
       .sort(sortAlerts);
+
+    latestAllArkansasAlerts = allArkansasAlerts;
 
     const panelAlerts = allArkansasAlerts
       .filter(isNwsLittleRockAlert)
@@ -730,6 +789,147 @@ async function loadAlerts(){
       </div>
     `;
   }
+}
+
+function openZoneDetail(zoneId){
+  const profile = zoneProfiles[zoneId];
+  if(!profile) return;
+
+  const zoneStations = stations.filter(s => profile.stations.includes(s.name));
+  const zonePoint = turf.point([profile.center[1], profile.center[0]]);
+
+  const activeAlerts = latestAllArkansasAlerts.filter(alert => {
+    const detail = buildAlertDetail(alert);
+    return detail.affectedStations.some(s => profile.stations.includes(s.name));
+  });
+
+  const alertItems = activeAlerts.length
+    ? activeAlerts.map(alert => `
+        <li>
+          <strong>${formatTitle(alert.properties)}</strong>
+          — Expires ${formatTime24(alert.properties.expires)}
+        </li>
+      `).join("")
+    : "<li>No current watches or warnings for this station group.</li>";
+
+  const stationItems = zoneStations.map(s => `<li>${s.name}</li>`).join("");
+  const outlook = getOutlookForPoint(zonePoint);
+
+  document.getElementById("detailTitle").textContent = profile.title;
+
+  document.getElementById("detailMeta").innerHTML = `
+    <strong>Station Radar View</strong><br>
+    Local station group view centered on ${profile.title}
+  `;
+
+  document.getElementById("detailBody").innerHTML = `
+    <div class="detail-section">
+      <strong>Station Radar View</strong>
+      <div id="stationRadarMap" style="height:280px;margin-top:10px;border-radius:10px;overflow:hidden;"></div>
+    </div>
+
+    <div class="detail-section">
+      <strong>Outlook Data</strong>
+      <ul class="detail-list">
+        <li>Tornado — <strong>${outlook.tornado}</strong></li>
+        <li>Hail — <strong>${outlook.hail}</strong></li>
+        <li>Wind — <strong>${outlook.wind}</strong></li>
+        <li>Excessive Rain — <strong>${outlook.excessiveRain}</strong></li>
+      </ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Stations</strong>
+      <ul class="detail-list">${stationItems}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Current Watches and Warnings</strong>
+      <ul class="detail-list">${alertItems}</ul>
+    </div>
+  `;
+
+  document.getElementById("detailOverlay").style.display = "flex";
+
+  setTimeout(() => {
+    buildStationRadarMap(profile, zoneStations);
+  }, 100);
+}
+
+function buildStationRadarMap(profile, zoneStations){
+  const miniMap = L.map("stationRadarMap", {
+    zoomControl:true,
+    attributionControl:false
+  }).setView(profile.center, 9);
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom:20
+  }).addTo(miniMap);
+
+  latestAllArkansasAlerts.forEach(alert => {
+    if(shouldDrawPolygon(alert)){
+      L.geoJSON(alert, {
+        style:{
+          color:getSeverity(alert.properties) === "tornado-warning" ? "#7e22ce" : "#f97316",
+          weight:3,
+          fillOpacity:.25
+        }
+      }).addTo(miniMap);
+    }
+  });
+
+  zoneStations.forEach(s => {
+    L.circleMarker([s.lat, s.lng], {
+      radius:7,
+      color:"#fff",
+      weight:2,
+      fillColor:"#005bea",
+      fillOpacity:1
+    }).bindPopup(`<strong>${s.name}</strong>`).addTo(miniMap);
+  });
+}
+
+function getOutlookForPoint(point){
+  return {
+    tornado:getOutlookLabel(point, outlookData.tornado),
+    hail:getOutlookLabel(point, outlookData.hail),
+    wind:getOutlookLabel(point, outlookData.wind),
+    excessiveRain:getOutlookLabel(point, outlookData.excessiveRain)
+  };
+}
+
+function getOutlookLabel(point, geojson){
+  if(!geojson || !geojson.features) return "Not loaded";
+
+  let best = "None";
+
+  geojson.features.forEach(feature => {
+    if(!feature.geometry) return;
+
+    try{
+      if(turf.booleanPointInPolygon(point, feature)){
+        best = readOutlookProperties(feature.properties);
+      }
+    }catch(e){}
+  });
+
+  return best;
+}
+
+function readOutlookProperties(props){
+  return (
+    props.LABEL ||
+    props.label ||
+    props.RISK ||
+    props.risk ||
+    props.CATEGORY ||
+    props.category ||
+    props.DN ||
+    props.dn ||
+    props.THRESHOLD ||
+    props.threshold ||
+    "Included"
+  );
 }
 
 function maintainMapViewAfterRefresh(){
@@ -1116,9 +1316,43 @@ function updateRefreshCountdown(){
   document.getElementById("refreshCountdown").textContent = secondsUntilRefresh + "s";
 }
 
+function updateConditionCardClasses(gustMph, lightningMiles, ageSec){
+  const windCard = document.getElementById("windCard");
+  const lightningCard = document.getElementById("lightningCard");
+  const updatedCard = document.getElementById("updatedCard");
+
+  windCard.className = "condition-card wind";
+  lightningCard.className = "condition-card lightning";
+  updatedCard.className = "condition-card updated";
+
+  if(gustMph >= 50) windCard.classList.add("warn");
+  else if(gustMph >= 35) windCard.classList.add("caution");
+
+  if(lightningMiles !== null && lightningMiles <= 10) lightningCard.classList.add("lightning-near");
+  else if(lightningMiles !== null && lightningMiles <= 20) lightningCard.classList.add("caution");
+
+  if(ageSec !== null && ageSec > 180) updatedCard.classList.add("warn");
+  else if(ageSec !== null && ageSec > 90) updatedCard.classList.add("caution");
+}
+
+function setTempestUnavailable(reason){
+  document.getElementById("tempValue").textContent = "--°";
+  document.getElementById("humidityValue").textContent = reason;
+  document.getElementById("rainValue").textContent = "--";
+  document.getElementById("rainRateValue").textContent = "Rate --";
+  document.getElementById("windValue").textContent = "--G--";
+  document.getElementById("windSubValue").textContent = "Direction --";
+  document.getElementById("lightningValue").textContent = "--";
+  document.getElementById("lightningSubValue").textContent = "Unavailable";
+  document.getElementById("tempestUpdatedValue").textContent = "--:--";
+  document.getElementById("tempestAgeValue").textContent = "Tempest unavailable";
+}
+
 loadAlerts();
 loadTempestConditions();
+loadOutlookData();
 
+setInterval(loadOutlookData, 10 * 60 * 1000);
 setInterval(updateRefreshCountdown, 1000);
 setInterval(loadTempestConditions, 60000);
 </script>
