@@ -442,12 +442,12 @@ header{
 /* ===== Screenshot-style storm dashboard overrides ===== */
 :root{--glass:rgba(3,8,13,.78);--glass-strong:rgba(3,8,13,.92);--line:rgba(255,255,255,.22);--hot:#f47b26;--blue2:#2563eb;}
 html,body{background:#020406;font-family:Arial,Helvetica,sans-serif;}
-body{height:100vh;display:grid;grid-template-rows:76px 58px minmax(0,1fr) 132px;overflow:hidden;}
-header{height:76px;padding:10px 18px;background:linear-gradient(180deg,#020406,#070b10);border-bottom:1px solid rgba(255,255,255,.20);display:grid;grid-template-columns:210px 1fr 185px;gap:16px;grid-row:1;}
+body{height:100vh;display:grid;grid-template-rows:86px 58px minmax(0,1fr) 132px;overflow:hidden;}
+header{height:86px;padding:10px 18px;background:linear-gradient(180deg,#020406,#070b10);border-bottom:1px solid rgba(255,255,255,.20);display:grid;grid-template-columns:210px 1fr 185px;gap:16px;grid-row:1;}
 .header-title{display:flex;flex-direction:column;line-height:.9;letter-spacing:0;font-size:0}
 .header-title::before{content:"MEMS";color:var(--hot);font-size:33px;font-weight:1000;font-style:italic;letter-spacing:.5px}
 .header-title::after{content:"Weather Center";color:#fff;font-size:22px;font-weight:900;font-style:italic;margin-top:5px}
-.header-info{font-size:13px;align-self:center}.header-info #infoTime{font-size:30px;display:block;margin-top:2px}
+.header-info{font-size:13px;align-self:center;justify-self:end;text-align:right;line-height:1.1;min-width:150px;padding-right:8px}.header-info div:first-child{white-space:nowrap}.header-info #infoTime{font-size:30px;display:block;margin:4px 0 4px;line-height:.95}.header-info div:last-child{white-space:nowrap;font-size:12px;color:#e5e7eb}
 .top-bar{height:58px;gap:6px;align-items:center;padding:0 12px;background:#020406;border-bottom:1px solid rgba(255,255,255,.18);grid-row:2;}
 .zone{height:48px;border-radius:4px;border:1px solid rgba(255,255,255,.14);box-shadow:0 6px 18px rgba(0,0,0,.28);overflow:hidden}
 .zone-btn{display:flex;align-items:center;justify-content:center;flex-direction:column;text-shadow:0 1px 3px rgba(0,0,0,.35);font-size:12px;line-height:1.2}
@@ -481,8 +481,8 @@ header{height:76px;padding:10px 18px;background:linear-gradient(180deg,#020406,#
 .alert-box{border-radius:5px;border:1px solid rgba(255,255,255,.15);border-left:0;box-shadow:0 9px 22px rgba(0,0,0,.36);padding:15px 16px;margin-bottom:10px}
 .alert-title{font-size:18px;text-transform:uppercase}.alert-meta{font-size:13px;color:#f8fafc}
 .station-hit{border-top:1px solid rgba(255,255,255,.18);padding-top:8px;margin-top:10px}.station-hit-title{color:#facc15;text-transform:uppercase;font-size:12px}
-.track-label,.major-track-label{background:transparent;border:0;box-shadow:none;color:#fff;text-shadow:0 2px 5px #000,0 0 3px #000;font-size:18px;font-weight:1000;padding:0;white-space:nowrap}.track-tick{width:4px;height:42px;background:#fff;border-radius:3px;box-shadow:0 0 0 2px #111,0 0 10px rgba(255,255,255,.75)}
-.major-track-label .eta{color:#fff;font-size:18px}.track-origin{width:18px;height:18px;border:3px solid #fff;background:#111;box-shadow:0 0 0 2px #111,0 0 18px rgba(255,255,255,.9)}
+.track-label,.major-track-label{background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.32);border-radius:4px;box-shadow:0 4px 10px rgba(0,0,0,.45);color:#fff;text-shadow:0 1px 3px #000;font-size:9px;font-weight:900;padding:1px 4px;white-space:nowrap;display:none;line-height:1.1}.track-label.visible,.major-track-label.visible{display:block}.track-step{position:relative;width:30px;height:30px;transform-origin:center center}.track-step::before{content:"";position:absolute;left:14px;top:4px;width:2px;height:22px;background:#fff;border-radius:2px;box-shadow:0 0 0 1px #111,0 0 5px rgba(255,255,255,.75)}.track-step::after{content:"";position:absolute;left:10px;top:10px;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #111,0 0 7px rgba(255,255,255,.8)}.track-origin{width:14px;height:14px;border-radius:50%;border:2px solid #fff;background:#111;box-shadow:0 0 0 2px #111,0 0 12px rgba(255,255,255,.8)}
+.major-track-label .eta{color:#fff;font-size:9px}
 .major-impact-label{background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.5);color:#fff;font-size:13px;text-shadow:0 2px 4px #000}
 .bottom-bar{height:132px;display:grid;grid-template-columns:280px repeat(4,1fr) 360px;gap:0;padding:0;background:#061016;border-top:1px solid rgba(255,255,255,.26)}
 .conditions-title,.condition-card{border-radius:0;border:0;border-right:1px solid rgba(255,255,255,.25);background:linear-gradient(180deg,rgba(7,16,22,.96),rgba(3,8,13,.96));box-shadow:none;padding:18px 22px}
@@ -632,6 +632,8 @@ let secondsUntilRefresh = REFRESH_SECONDS;
 let lastUserMapActivity = 0;
 let latestPanelAlerts = [];
 let latestAllArkansasAlerts = [];
+let latestCustomStormTracks = [];
+let activeTrackId = null;
 let impactedStationNames = new Set();
 let TRACK_WINDOW_MINUTES = 60;
 
@@ -647,8 +649,7 @@ const AR_CENTER = [34.75, -92.25];
 const AR_ZOOM = 7;
 
 const map = L.map("map", {
-  maxBounds: AR_BOUNDS.pad(0.08),
-  maxBoundsViscosity: 1.0
+  worldCopyJump:false
 }).setView(AR_CENTER, AR_ZOOM);
 
 L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -957,11 +958,32 @@ function setTrackWindow(minutes){
 
 function redrawStormTracks(){
   stormTrackLayer.clearLayers();
+
   latestAllArkansasAlerts.forEach(alert => {
-    if(shouldDrawPolygon(alert)){
+    if(shouldDrawTrackForAlert(alert)){
       drawStormTrack(alert);
     }
   });
+
+  latestCustomStormTracks.forEach(track => {
+    drawCustomStormTrack(track);
+  });
+}
+
+async function loadCustomStormTracks(){
+  try{
+    const res = await fetch("storm-tracks.json", { cache:"no-store" });
+    if(!res.ok){
+      latestCustomStormTracks = [];
+      redrawStormTracks();
+      return;
+    }
+    const data = await res.json();
+    latestCustomStormTracks = Array.isArray(data) ? data : (Array.isArray(data.tracks) ? data.tracks : []);
+    redrawStormTracks();
+  }catch(err){
+    latestCustomStormTracks = [];
+  }
 }
 
 async function loadAlerts(){
@@ -1003,6 +1025,9 @@ async function loadAlerts(){
     allArkansasAlerts.forEach(alert => {
       if(shouldDrawPolygon(alert)){
         warningLayer.addData(alert);
+      }
+
+      if(shouldDrawTrackForAlert(alert)){
         drawStormTrack(alert);
       }
 
@@ -1559,10 +1584,19 @@ function directionToBearing(direction){
   return map[String(direction || "").toUpperCase()] ?? null;
 }
 
+function shouldDrawTrackForAlert(alert){
+  const p = alert.properties || {};
+  const event = p.event || "";
+  return Boolean(alert.geometry) && (
+    event === "Tornado Warning" ||
+    event === "Severe Thunderstorm Warning" ||
+    event === "Special Weather Statement" ||
+    event === "Marine Weather Statement"
+  );
+}
+
 function drawStormTrack(alert){
   const p = alert.properties || {};
-  if(!shouldDrawMajorStormTrack(p)) return;
-
   const motion = parseStormMotion(p);
   const origin = parseStormOrigin(alert, p);
   if(!motion || !motion.speed || !origin) return;
@@ -1571,39 +1605,45 @@ function drawStormTrack(alert){
   if(bearing === null) return;
 
   const severity = getSeverity(p);
-  const color = "#ffffff";
+  const trackId = slug(alert.id || `${p.event}-${origin.label}-${p.sent || p.effective || Date.now()}`);
   const originPoint = turf.point([origin.lng, origin.lat]);
   const minutes = buildTrackMinutes();
   const points = minutes.map(min => projectPointFromOrigin(originPoint, motion.speed, bearing, min));
 
-  const majorReason = getMajorStormReason(p);
+  const group = L.layerGroup().addTo(stormTrackLayer);
 
-  L.polyline(points, {
+  const outline = L.polyline(points, {
     color:"#050505",
-    weight: severity === "tornado-emergency" ? 10 : 9,
-    opacity:.95,
-    dashArray:null,
+    weight:4,
+    opacity:.85,
     interactive:false
-  }).addTo(stormTrackLayer);
+  }).addTo(group);
 
-  L.polyline(points, {
-    color,
-    weight: severity === "tornado-emergency" ? 5 : 4,
+  const line = L.polyline(points, {
+    color:"#ffffff",
+    weight:1.5,
     opacity:.98,
-    dashArray:null,
     className:"storm-track-line"
   }).bindPopup(`
     <strong>${formatTitle(p)}</strong><br>
-    <strong>Major track:</strong> ${majorReason}<br>
     <strong>Motion:</strong> ${motion.direction} at ${motion.speed} mph<br>
     <strong>Origin:</strong> ${origin.label}<br>
     <strong>Track timing:</strong> ${buildTrackTimingText(originPoint, motion.speed, bearing)}
-  `).addTo(stormTrackLayer);
+  `).addTo(group);
+
+  line.on("click", function(){
+    activeTrackId = activeTrackId === trackId ? null : trackId;
+    redrawStormTracks();
+    if(activeTrackId === trackId) line.openPopup();
+  });
 
   L.marker(points[0], {
-    icon:L.divIcon({ className:"", html:`<div class="track-origin"></div>`, iconSize:[18,18], iconAnchor:[9,9] })
-  }).bindPopup(`<strong>Storm location</strong><br>${origin.label}<br>${motion.direction} at ${motion.speed} mph`).addTo(stormTrackLayer);
+    icon:L.divIcon({ className:"", html:`<div class="track-origin"></div>`, iconSize:[14,14], iconAnchor:[7,7] })
+  }).bindPopup(`<strong>Storm location</strong><br>${origin.label}<br>${motion.direction} at ${motion.speed} mph`).addTo(group);
 
+  addTrackBarbs(group, points, bearing);
+
+  const showLabels = activeTrackId === trackId;
   minutes.slice(1).forEach((min, idx) => {
     const eta = formatTime24(new Date(Date.now() + min * 60000).toISOString());
     const pt = points[idx + 1];
@@ -1612,24 +1652,82 @@ function drawStormTrack(alert){
       interactive:false,
       icon:L.divIcon({
         className:"",
-        html:`<div class="track-tick" style="transform:rotate(${bearing}deg)"></div>`,
-        iconSize:[10,48],
-        iconAnchor:[5,24]
+        html:`<div class="major-track-label ${showLabels ? "visible" : ""}"><div class="eta">${eta}</div></div>`,
+        iconSize:[48,20],
+        iconAnchor:[24,26]
       })
-    }).addTo(stormTrackLayer);
+    }).addTo(group);
+  });
 
+  if(showLabels){
+    addMajorImpactTimingLabelsToGroup(group, alert, origin, motion, bearing);
+  }
+}
+
+function addTrackBarbs(group, points, bearing){
+  if(points.length < 2) return;
+
+  // The track line uses compass bearing. The marker below is a vertical bar by default,
+  // so rotating it to the track bearing makes the visual bar perpendicular to the line.
+  // The center dot sits directly on the projected time point, keeping timing attached to the line.
+  const rotate = bearing;
+
+  points.slice(1).forEach((pt) => {
     L.marker(pt, {
       interactive:false,
       icon:L.divIcon({
         className:"",
-        html:`<div class="major-track-label"><div class="eta">${eta}</div></div>`,
-        iconSize:[82,36],
-        iconAnchor:[41,42]
+        html:`<div class="track-step" style="transform:rotate(${rotate}deg)"></div>`,
+        iconSize:[30,30],
+        iconAnchor:[15,15]
       })
-    }).addTo(stormTrackLayer);
+    }).addTo(group);
+  });
+}
+
+function drawCustomStormTrack(track){
+  if(!track || track.lat === undefined || track.lng === undefined || !track.direction || !track.speed) return;
+
+  const bearing = directionToBearing(track.direction);
+  if(bearing === null) return;
+
+  const trackId = slug(track.id || track.name || `${track.lat}-${track.lng}-${track.direction}-${track.speed}`);
+  const originPoint = turf.point([Number(track.lng), Number(track.lat)]);
+  const minutes = buildTrackMinutes();
+  const points = minutes.map(min => projectPointFromOrigin(originPoint, Number(track.speed), bearing, min));
+  const group = L.layerGroup().addTo(stormTrackLayer);
+
+  L.polyline(points, { color:"#050505", weight:4, opacity:.85, interactive:false }).addTo(group);
+  const line = L.polyline(points, { color:"#ffffff", weight:1.5, opacity:.98, className:"storm-track-line" })
+    .bindPopup(`<strong>${track.name || "Unwarned storm track"}</strong><br><strong>Motion:</strong> ${track.direction} at ${track.speed} mph<br><strong>Source:</strong> ${track.source || "storm-tracks.json"}`)
+    .addTo(group);
+
+  line.on("click", function(){
+    activeTrackId = activeTrackId === trackId ? null : trackId;
+    redrawStormTracks();
+    if(activeTrackId === trackId) line.openPopup();
   });
 
-  addMajorImpactTimingLabels(alert, origin, motion, bearing);
+  L.marker(points[0], {
+    icon:L.divIcon({ className:"", html:`<div class="track-origin"></div>`, iconSize:[14,14], iconAnchor:[7,7] })
+  }).bindPopup(`<strong>${track.name || "Storm location"}</strong><br>${track.direction} at ${track.speed} mph`).addTo(group);
+
+  addTrackBarbs(group, points, bearing);
+
+  const showLabels = activeTrackId === trackId;
+  minutes.slice(1).forEach((min, idx) => {
+    const eta = formatTime24(new Date(Date.now() + min * 60000).toISOString());
+    const pt = points[idx + 1];
+    L.marker(pt, {
+      interactive:false,
+      icon:L.divIcon({
+        className:"",
+        html:`<div class="major-track-label ${showLabels ? "visible" : ""}"><div class="eta">${eta}</div></div>`,
+        iconSize:[48,20],
+        iconAnchor:[24,26]
+      })
+    }).addTo(group);
+  });
 }
 
 function shouldDrawMajorStormTrack(p){
@@ -1690,7 +1788,7 @@ function buildTrackTimingText(originPoint, speedMph, bearing){
   }).join(" | ");
 }
 
-function addMajorImpactTimingLabels(alert, origin, motion, bearing){
+function addMajorImpactTimingLabelsToGroup(group, alert, origin, motion, bearing){
   const candidates = [...stations, ...towns, ...locations]
     .filter(item => item.lat !== undefined && item.lng !== undefined)
     .map(item => {
@@ -1713,7 +1811,7 @@ function addMajorImpactTimingLabels(alert, origin, motion, bearing){
         iconSize:[130,24],
         iconAnchor:[65,12]
       })
-    }).addTo(stormTrackLayer);
+    }).addTo(group);
   });
 }
 
@@ -2092,10 +2190,12 @@ updateStationSummary();
 loadAlerts();
 loadTempestConditions();
 loadOutlookData();
+loadCustomStormTracks();
 
 setInterval(loadOutlookData, 10 * 60 * 1000);
 setInterval(updateRefreshCountdown, 1000);
 setInterval(loadTempestConditions, 60000);
+setInterval(loadCustomStormTracks, 60000);
 
 </script>
 </body>
