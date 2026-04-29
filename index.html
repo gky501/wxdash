@@ -1254,12 +1254,7 @@ function openDetail(detail){
     "No MEMS stations currently inside this alert area."
   );
 
-  const townItems = formatCondensedAlphabetizedList(
-    detail.affectedTowns,
-    t => `${t.name} <strong>(${t.impact})</strong>`,
-    "No tracked towns currently inside this alert area."
-  );
-
+  const impactedLocationItems = formatLocationImpactsFromFeed(detail);
   const locationItems = formatLocationsByType(detail.affectedPOI);
 
   document.getElementById("detailBody").innerHTML = `
@@ -1269,8 +1264,8 @@ function openDetail(detail){
     </div>
 
     <div class="detail-section">
-      <strong>Affected Towns</strong>
-      <ul class="detail-list">${townItems}</ul>
+      <strong>Locations Impacted (NWS Feed)</strong>
+      <ul class="detail-list">${impactedLocationItems}</ul>
     </div>
 
     <div class="detail-section">
@@ -1287,6 +1282,39 @@ function openDetail(detail){
   document.getElementById("detailOverlay").style.display = "flex";
 }
 
+function formatLocationImpactsFromFeed(detail){
+  const names = extractImpactedLocations(detail.description || "", detail.instruction || "");
+  if(!names.length) return "<li>No impacted locations listed in this NWS alert text.</li>";
+
+  return names
+    .sort((a,b) => a.localeCompare(b))
+    .map(name => `<li>${name}</li>`)
+    .join("");
+}
+
+function extractImpactedLocations(description, instruction){
+  const text = `${description}
+${instruction}`;
+  const match = text.match(/\*\s*Locations\s+impacted\s+include\.\.\.\s*([\s\S]*?)(?:
+\*\s*[A-Z]|
+[A-Z][A-Z\s\.]{3,}:|
+&&|$)/i);
+  if(!match) return [];
+
+  const raw = match[1]
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if(!raw) return [];
+
+  return [...new Set(
+    raw
+      .split(",")
+      .map(part => part.trim())
+      .map(part => part.replace(/\.$/, ""))
+      .filter(Boolean)
+  )];
+}
 
 function formatCondensedAlphabetizedList(items, renderItem, emptyMessage){
   if(!items.length) return `<li>${emptyMessage}</li>`;
