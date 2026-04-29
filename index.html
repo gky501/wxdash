@@ -35,7 +35,9 @@
     height:100vh;
     display:grid;
     grid-template-rows:28px 86px 58px minmax(0,1fr) 132px;
-}.beta-bar {
+    overflow:hidden;
+}
+.beta-bar {
     background:#dc2626;
     color:#fff;
     font-size:13px;
@@ -131,6 +133,7 @@
     grid-template-columns:260px minmax(0,1fr) 380px;
     min-height:0;
     height:100%;
+    overflow:hidden;
     border-bottom:1px solid rgba(255,255,255,.25);
 }.control-rail {
     min-height:0;
@@ -149,6 +152,7 @@
 #map {
     height:100%;
     width:100%;
+    min-height:300px;
     background:#081018;
     position:absolute;
     top:0;
@@ -1123,28 +1127,23 @@ function extractImpactedAreasFromBulletin(p){
 }
 
 function splitBulletinPlaceList(block){
-    return String(block||"").replace(/\n/g," ").replace(/\s+/g," ").split(/,|;
-    | and /i).map(cleanBulletinPlace).filter(Boolean)
+    return String(block||"")
+        .replace(/\n/g," ")
+        .replace(/\s+/g," ")
+        .split(/,|;|\band\b/i)
+        .map(cleanBulletinPlace)
+        .filter(Boolean)
 }
 
 function cleanBulletinPlace(v){
-    return String(v||"").replace(/\b(around|near|including|mainly|about|between|after|before)\b/ig,"").replace(/\b\d{
-        1,2
-    }
-
-    :\d{
-        2
-    }
-
-    \s*(?:AM|PM)?\b/ig,"").replace(/\b\d{
-        1,2
-    }
-
-    \s*(?:AM|PM)\b/ig,"").replace(/\b(by|at)\s*\d{
-        1,2
-    }
-
-    \s*(?:AM|PM)?\b/ig,"").replace(/\.$/,"").replace(/\s+/g," ").trim()
+    return String(v||"")
+        .replace(/\b(around|near|including|mainly|about|between|after|before)\b/ig,"")
+        .replace(/\b\d{1,2}:\d{2}\s*(?:AM|PM)?\b/ig,"")
+        .replace(/\b\d{1,2}\s*(?:AM|PM)\b/ig,"")
+        .replace(/\b(by|at)\s*\d{1,2}\s*(?:AM|PM)?\b/ig,"")
+        .replace(/\.$/,"")
+        .replace(/\s+/g," ")
+        .trim()
 }
 
 function areaLooksRelevantToPOI(area,location){
@@ -1156,24 +1155,16 @@ function areaLooksRelevantToPOI(area,location){
 }
 
 function parseStormMotion(p){
-    const params=p.parameters||{
-    }
-    ,paramText=Object.keys(params).map(k=>Array.isArray(params[k])?params[k].join(" "):String(params[k]||"")).join(" ");
+    const params=p.parameters||{};
+    const paramText=Object.keys(params).map(k=>Array.isArray(params[k])?params[k].join(" "):String(params[k]||"")).join(" ");
     const text=`${p.headline||""} ${p.description||""} ${p.instruction||""} ${paramText}`;
-    const m=text.match(/moving\s+([A-Z]{
-        1,3
-    }
-
-    |north|south|east|west|northeast|northwest|southeast|southwest|north-northeast|east-northeast|east-southeast|south-southeast|south-southwest|west-southwest|west-northwest|north-northwest)\s+at\s+(\d+)\s*(mph|kt|kts|knots?)?/i);
+    const m=text.match(/moving\s+([A-Z]{1,3}|north|south|east|west|northeast|northwest|southeast|southwest|north-northeast|east-northeast|east-southeast|south-southeast|south-southwest|west-southwest|west-northwest|north-northwest)\s+at\s+(\d+)\s*(mph|kt|kts|knots?)?/i);
     if(!m)return null;
     const dir=normalizeMotionDirection(m[1]);
     let speed=Number(m[2]);
     const unit=String(m[3]||"mph").toLowerCase();
     if(unit.startsWith("kt")||unit.startsWith("knot"))speed=Math.round(speed*1.15078);
-    return{
-        direction:dir,speed,originalSpeed:Number(m[2]),unit
-    }
-
+    return{direction:dir,speed,originalSpeed:Number(m[2]),unit}
 }
 
 function normalizeMotionDirection(v){
