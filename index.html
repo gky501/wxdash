@@ -442,21 +442,21 @@ header{
 /* ===== Screenshot-style storm dashboard overrides ===== */
 :root{--glass:rgba(3,8,13,.78);--glass-strong:rgba(3,8,13,.92);--line:rgba(255,255,255,.22);--hot:#f47b26;--blue2:#2563eb;}
 html,body{background:#020406;font-family:Arial,Helvetica,sans-serif;}
-body{height:100vh;display:grid;grid-template-rows:76px 1fr 132px;overflow:hidden;}
-header{height:76px;padding:10px 18px;background:linear-gradient(180deg,#020406,#070b10);border-bottom:1px solid rgba(255,255,255,.20);display:grid;grid-template-columns:210px 1fr 185px;gap:16px;}
+body{height:100vh;display:grid;grid-template-rows:76px 58px minmax(0,1fr) 132px;overflow:hidden;}
+header{height:76px;padding:10px 18px;background:linear-gradient(180deg,#020406,#070b10);border-bottom:1px solid rgba(255,255,255,.20);display:grid;grid-template-columns:210px 1fr 185px;gap:16px;grid-row:1;}
 .header-title{display:flex;flex-direction:column;line-height:.9;letter-spacing:0;font-size:0}
 .header-title::before{content:"MEMS";color:var(--hot);font-size:33px;font-weight:1000;font-style:italic;letter-spacing:.5px}
 .header-title::after{content:"Weather Center";color:#fff;font-size:22px;font-weight:900;font-style:italic;margin-top:5px}
 .header-info{font-size:13px;align-self:center}.header-info #infoTime{font-size:30px;display:block;margin-top:2px}
-.top-bar{height:100%;gap:6px;align-items:center;padding:0}
-.zone{height:56px;border-radius:4px;border:1px solid rgba(255,255,255,.14);box-shadow:0 6px 18px rgba(0,0,0,.28);overflow:hidden}
+.top-bar{height:58px;gap:6px;align-items:center;padding:0 12px;background:#020406;border-bottom:1px solid rgba(255,255,255,.18);grid-row:2;}
+.zone{height:48px;border-radius:4px;border:1px solid rgba(255,255,255,.14);box-shadow:0 6px 18px rgba(0,0,0,.28);overflow:hidden}
 .zone-btn{display:flex;align-items:center;justify-content:center;flex-direction:column;text-shadow:0 1px 3px rgba(0,0,0,.35);font-size:12px;line-height:1.2}
 .zone.normal{background:linear-gradient(180deg,#0a8a40,#05672d)}
 .zone.tstorm-watch{background:linear-gradient(180deg,#facc15,#d8a800);color:#080808}
 .zone.tstorm-warning{background:linear-gradient(180deg,#f97316,#c2410c)}
 .zone.tornado-watch,.zone.tornado-warning{background:linear-gradient(180deg,#dc2626,#991b1b)}
 .zone.tornado-emergency{background:linear-gradient(90deg,#dc2626,#7e22ce)}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;min-height:0;height:100%;border-bottom:1px solid rgba(255,255,255,.25)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;min-height:0;height:100%;border-bottom:1px solid rgba(255,255,255,.25);grid-row:3;}
 .map-wrap{position:relative;min-height:0;overflow:hidden;border-right:1px solid rgba(255,255,255,.25)}
 #map{height:100%;width:100%;background:#081018}
 .leaflet-control-layers{display:none!important}.leaflet-control-zoom a{background:#f8fafc!important;color:#111!important;font-weight:900}
@@ -490,10 +490,11 @@ header{height:76px;padding:10px 18px;background:linear-gradient(180deg,#020406,#
 .condition-card.temp,.condition-card.rain,.condition-card.wind,.condition-card.lightning,.condition-card.updated{border-left:0}
 .condition-card.temp .value::before{content:"☁️ ";font-size:32px}.condition-card.rain .value::before{content:"💧 "}.condition-card.wind .value::before{content:"≋ ";color:#f97316}.condition-card.lightning .value::before{content:"⚡ ";color:#facc15}
 .condition-card.updated{display:none}
-.bottom-bar::after{content:"MEMS STATIONS\A  ◉ Online   ◉ Impacted   ● POI\A VIEW STATION LIST";white-space:pre-line;display:flex;align-items:center;padding:18px 22px;color:#fff;font-weight:800;line-height:2;background:linear-gradient(180deg,rgba(7,16,22,.96),rgba(3,8,13,.96))}
+.station-summary{display:flex;flex-direction:column;justify-content:center;gap:10px;padding:18px 22px;background:linear-gradient(180deg,rgba(7,16,22,.96),rgba(3,8,13,.96));font-weight:800;border-left:1px solid rgba(255,255,255,.25)}
+.station-summary-title{font-size:16px;font-weight:1000;letter-spacing:.03em;color:#fff}.station-summary-row{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;line-height:1.3}.station-dot{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;vertical-align:-2px;border:2px solid #fff}.station-dot.online{background:#005bea}.station-dot.impacted{background:#ef4444;box-shadow:0 0 12px rgba(239,68,68,.85)}.station-dot.poi{background:#facc15;border-color:#facc15}.station-list-btn{width:100%;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.04);color:#fff;border-radius:5px;padding:9px 10px;font-weight:900;cursor:pointer}.station-list-btn:hover{background:rgba(255,255,255,.12)}
 #detailOverlay{background:rgba(0,0,0,.58)}.detail-card{background:#071016;border:1px solid rgba(255,255,255,.28);border-radius:6px;width:min(740px,92vw)}.detail-title{text-transform:uppercase}.detail-section{border-top:1px solid rgba(255,255,255,.16)}.close-btn{border-radius:4px}
-@media(max-width:1200px){body{grid-template-rows:72px 1fr 112px}header{grid-template-columns:180px 1fr 145px}.layout{grid-template-columns:minmax(0,1fr) 330px}.map-controls{width:230px}.bottom-bar{grid-template-columns:220px repeat(4,1fr)}.bottom-bar::after{display:none}}
-@media(max-width:900px){body{overflow:auto;display:block}header{height:auto;display:block}.top-bar{flex-wrap:wrap;height:auto;margin-top:10px}.zone{min-width:48%}.layout{display:block}.map-wrap{height:60vh}.panel{height:45vh}.map-controls{position:absolute;left:10px;top:80px;transform:scale(.92);transform-origin:top left}.bottom-bar{height:auto;grid-template-columns:1fr 1fr}.conditions-title{grid-column:1/-1}}
+@media(max-width:1200px){body{grid-template-rows:72px 54px minmax(0,1fr) 112px}header{grid-template-columns:180px 1fr 145px}.layout{grid-template-columns:minmax(0,1fr) 330px}.map-controls{width:230px}.bottom-bar{grid-template-columns:220px repeat(4,1fr)}.station-summary{display:none}}
+@media(max-width:700px){body{overflow:auto;display:block}header{height:auto;display:block}.top-bar{flex-wrap:wrap;height:auto;margin-top:0;padding:6px}.zone{min-width:48%;height:56px}.layout{display:block}.map-wrap{height:66vh}.panel{height:45vh}.map-controls{position:absolute;left:10px;top:80px;transform:scale(.92);transform-origin:top left}.bottom-bar{height:auto;grid-template-columns:1fr 1fr}.conditions-title{grid-column:1/-1}}
 
 </style>
 </head>
@@ -542,16 +543,15 @@ header{height:76px;padding:10px 18px;background:linear-gradient(180deg,#020406,#
 
       <div class="controls-title small">TRACK TIME STEPS</div>
       <div class="track-buttons">
-        <button type="button" class="active">15 min</button>
-        <button type="button">30 min</button>
-        <button type="button">45 min</button>
-        <button type="button">60 min</button>
+        <button type="button" data-track-minutes="15" onclick="setTrackWindow(15)">15 min</button>
+        <button type="button" data-track-minutes="30" onclick="setTrackWindow(30)">30 min</button>
+        <button type="button" data-track-minutes="45" onclick="setTrackWindow(45)">45 min</button>
+        <button type="button" class="active" data-track-minutes="60" onclick="setTrackWindow(60)">60 min</button>
       </div>
     </section>
   </main>
   <aside class="panel">
     <div id="alerts"></div>
-  </div>
   </aside>
 </div>
 
@@ -590,6 +590,16 @@ header{height:76px;padding:10px 18px;background:linear-gradient(180deg,#020406,#
     <div class="value" id="tempestUpdatedValue">--:--</div>
     <div class="sub" id="tempestAgeValue">Waiting for data</div>
   </div>
+
+  <section class="station-summary" aria-label="MEMS station summary">
+    <div class="station-summary-title">MEMS STATIONS</div>
+    <div class="station-summary-row">
+      <span><i class="station-dot online"></i>Online <strong id="stationOnlineCount">0</strong></span>
+      <span><i class="station-dot impacted"></i>Impacted <strong id="stationImpactedCount">0</strong></span>
+      <span><i class="station-dot poi"></i>POI <strong id="poiCount">0</strong></span>
+    </div>
+    <button type="button" class="station-list-btn" onclick="openStationList()">VIEW STATION LIST</button>
+  </section>
 </div>
 
 <div id="detailOverlay">
@@ -618,6 +628,8 @@ let secondsUntilRefresh = REFRESH_SECONDS;
 let lastUserMapActivity = 0;
 let latestPanelAlerts = [];
 let latestAllArkansasAlerts = [];
+let impactedStationNames = new Set();
+let TRACK_WINDOW_MINUTES = 60;
 
 let outlookData = {
   tornado:null,
@@ -931,6 +943,23 @@ async function loadOutlookData(){
   }
 }
 
+function setTrackWindow(minutes){
+  TRACK_WINDOW_MINUTES = Number(minutes) || 60;
+  document.querySelectorAll("[data-track-minutes]").forEach(btn => {
+    btn.classList.toggle("active", Number(btn.dataset.trackMinutes) === TRACK_WINDOW_MINUTES);
+  });
+  redrawStormTracks();
+}
+
+function redrawStormTracks(){
+  stormTrackLayer.clearLayers();
+  latestAllArkansasAlerts.forEach(alert => {
+    if(shouldDrawPolygon(alert)){
+      drawStormTrack(alert);
+    }
+  });
+}
+
 async function loadAlerts(){
   const container = document.getElementById("alerts");
   container.innerHTML = "";
@@ -940,6 +969,7 @@ async function loadAlerts(){
 
   resetZones();
   resetStationMarkers();
+  updateStationSummary();
 
   try{
     const res = await fetch("https://api.weather.gov/alerts/active", {
@@ -976,6 +1006,8 @@ async function loadAlerts(){
       applyZoneStatus(detail.affectedStations, detail.affectedTowns, getSeverity(alert.properties));
       highlightImpactedStations(detail.affectedStations);
     });
+
+    updateStationSummary();
 
     if(!panelAlerts.length){
       container.innerHTML = `
@@ -1487,6 +1519,11 @@ function findKnownPlace(name){
   }) || null;
 }
 
+function buildTrackMinutes(){
+  const steps = [0, 15, 30, 45, 60];
+  return steps.filter(min => min === 0 || min <= TRACK_WINDOW_MINUTES);
+}
+
 function directionToBearing(direction){
   const map = {
     N:0, NNE:22.5, NE:45, ENE:67.5,
@@ -1509,9 +1546,9 @@ function drawStormTrack(alert){
   if(bearing === null) return;
 
   const severity = getSeverity(p);
-  const color = severity === "tornado-emergency" ? "#ff00ff" : severity === "tornado-warning" ? "#a855f7" : "#f97316";
+  const color = "#ffffff";
   const originPoint = turf.point([origin.lng, origin.lat]);
-  const minutes = [0, 15, 30, 45, 60];
+  const minutes = buildTrackMinutes();
   const points = minutes.map(min => projectPointFromOrigin(originPoint, motion.speed, bearing, min));
 
   const majorReason = getMajorStormReason(p);
@@ -1520,7 +1557,7 @@ function drawStormTrack(alert){
     color,
     weight: severity === "tornado-emergency" ? 6 : 5,
     opacity:.98,
-    dashArray:"12 8",
+    dashArray:null,
     className:"storm-track-line"
   }).bindPopup(`
     <strong>${formatTitle(p)}</strong><br>
@@ -1534,13 +1571,13 @@ function drawStormTrack(alert){
     icon:L.divIcon({ className:"", html:`<div class="track-origin"></div>`, iconSize:[18,18], iconAnchor:[9,9] })
   }).bindPopup(`<strong>Storm location</strong><br>${origin.label}<br>${motion.direction} at ${motion.speed} mph`).addTo(stormTrackLayer);
 
-  [15,30,45,60].forEach((min, idx) => {
+  minutes.slice(1).forEach((min, idx) => {
     const eta = formatTime24(new Date(Date.now() + min * 60000).toISOString());
     L.marker(points[idx + 1], {
       interactive:false,
       icon:L.divIcon({
         className:"",
-        html:`<div class="major-track-label"><div>+${min} MIN</div><div class="eta">${eta}</div></div>`,
+        html:`<div class="major-track-label"><div class="eta">${eta}</div></div>`,
         iconSize:[82,36],
         iconAnchor:[41,18]
       })
@@ -1553,8 +1590,10 @@ function drawStormTrack(alert){
 function shouldDrawMajorStormTrack(p){
   const severity = getSeverity(p);
   if(severity === "tornado-emergency" || severity === "tornado-warning") return true;
+  if(severity === "tstorm-warning") return true;
+  return false;
 
-  if(severity !== "tstorm-warning") return false;
+  /* legacy major-only filter kept below, unreachable by design */
 
   const text = `${p.headline || ""} ${p.description || ""} ${p.instruction || ""}`.toUpperCase();
   const params = p.parameters || {};
@@ -1601,7 +1640,7 @@ function projectPointFromOrigin(originPoint, speedMph, bearing, minutes){
 }
 
 function buildTrackTimingText(originPoint, speedMph, bearing){
-  return [15,30,45,60].map(min => {
+  return buildTrackMinutes().slice(1).map(min => {
     return `+${min} min ${formatTime24(new Date(Date.now() + min * 60000).toISOString())}`;
   }).join(" | ");
 }
@@ -1716,13 +1755,41 @@ function setZoneSeverity(el, severity){
 
 function highlightImpactedStations(stationsHit){
   stationsHit.forEach(station => {
+    impactedStationNames.add(station.name);
     const markerEl = document.getElementById(`marker-${slug(station.name)}`);
     if(markerEl) markerEl.classList.add("impacted");
   });
 }
 
 function resetStationMarkers(){
+  impactedStationNames = new Set();
   document.querySelectorAll(".station-marker").forEach(el => el.classList.remove("impacted"));
+}
+
+function updateStationSummary(){
+  const onlineEl = document.getElementById("stationOnlineCount");
+  const impactedEl = document.getElementById("stationImpactedCount");
+  const poiEl = document.getElementById("poiCount");
+  if(onlineEl) onlineEl.textContent = stations.length;
+  if(impactedEl) impactedEl.textContent = impactedStationNames.size;
+  if(poiEl) poiEl.textContent = locations.length;
+}
+
+function openStationList(){
+  const impacted = stations.filter(s => impactedStationNames.has(s.name));
+  const stationItems = stations
+    .map(s => `<li><strong>${s.name}</strong> — ${s.area}${impactedStationNames.has(s.name) ? " <strong style=\"color:#f87171\">IMPACTED</strong>" : ""}</li>`)
+    .join("");
+
+  document.getElementById("detailTitle").textContent = "MEMS Stations";
+  document.getElementById("detailMeta").innerHTML = `<strong>${stations.length}</strong> stations tracked • <strong>${impacted.length}</strong> impacted by current alert polygons`;
+  document.getElementById("detailBody").innerHTML = `
+    <div class="detail-section">
+      <strong>Station List</strong>
+      <ul class="detail-list">${stationItems}</ul>
+    </div>
+  `;
+  document.getElementById("detailOverlay").style.display = "flex";
 }
 
 function resetZones(){
@@ -1976,6 +2043,7 @@ function setTempestUnavailable(reason){
   document.getElementById("tempestAgeValue").textContent = "Tempest unavailable";
 }
 
+updateStationSummary();
 loadAlerts();
 loadTempestConditions();
 loadOutlookData();
