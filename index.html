@@ -211,6 +211,31 @@ header{
   box-shadow:0 0 12px rgba(250,204,21,.7);
 }
 
+.storm-track-line{
+  filter:drop-shadow(0 0 7px rgba(255,255,255,.55));
+}
+
+.track-label{
+  background:rgba(2,6,23,.92);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.35);
+  border-radius:6px;
+  padding:3px 6px;
+  font-size:11px;
+  font-weight:900;
+  white-space:nowrap;
+  box-shadow:0 4px 12px rgba(0,0,0,.35);
+}
+
+.track-origin{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#fff;
+  border:3px solid #111;
+  box-shadow:0 0 18px rgba(255,255,255,.95);
+}
+
 .bottom-bar{
   height:104px;
   flex-shrink:0;
@@ -607,6 +632,17 @@ const zoneProfiles = {
 const stationLayer = L.layerGroup().addTo(map);
 const poiLayer = L.layerGroup().addTo(map);
 
+/* Radar overlay: browser-friendly NEXRAD reflectivity. Toggle from layer box. */
+const radarLayer = L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi", {
+  layers:"nexrad-n0q-900913",
+  format:"image/png",
+  transparent:true,
+  opacity:.58,
+  attribution:"Radar: Iowa State Mesonet / NEXRAD"
+});
+
+const stormTrackLayer = L.layerGroup().addTo(map);
+
 const warningLayer = L.geoJSON(null, {
   style:function(feature){
     const severity = getSeverity(feature.properties);
@@ -655,6 +691,8 @@ locations.forEach(location => {
 });
 
 L.control.layers(null, {
+  "Radar Reflectivity": radarLayer,
+  "Storm Tracks": stormTrackLayer,
   "Stations": stationLayer,
   "Locations": poiLayer,
   "Warning Polygons": warningLayer
@@ -759,6 +797,7 @@ async function loadAlerts(){
   const container = document.getElementById("alerts");
   container.innerHTML = "";
   warningLayer.clearLayers();
+  stormTrackLayer.clearLayers();
   latestPanelAlerts = [];
 
   resetZones();
@@ -792,6 +831,7 @@ async function loadAlerts(){
     allArkansasAlerts.forEach(alert => {
       if(shouldDrawPolygon(alert)){
         warningLayer.addData(alert);
+        drawStormTrack(alert);
       }
 
       const detail = buildAlertDetail(alert);
@@ -1082,6 +1122,7 @@ function getAlertNumber(p){
 function buildAlertDetail(alert){
   const p = alert.properties;
   const motion = parseStormMotion(p);
+  const stormOrigin = parseStormOrigin(alert, p);
   const affectedStations = [];
   const affectedTowns = [];
   const affectedPOI = [];
@@ -1137,9 +1178,10 @@ function buildAlertDetail(alert){
     expires:p.expires,
     areaDesc:p.areaDesc || "",
     motion,
-    affectedStations:dedupeByName(affectedStations).map(s => ({...s, impact:estimateImpactTime(alert, s, motion)})),
-    affectedTowns:dedupeByName(affectedTowns).map(t => ({...t, impact:(t.lat !== undefined && t.lng !== undefined) ? estimateImpactTime(alert, t, motion) : (t.impact || "Timing not available")})),
-    affectedPOI:dedupeByName(affectedPOI).map(poi => ({...poi, impact:estimateImpactTime(alert, poi, motion)})),
+    stormOrigin,
+    affectedStations:dedupeByName(affectedStations).map(s => ({...s, impact:estimateImpactTime(alert, s, motion, stormOrigin)})),
+    affectedTowns:dedupeByName(affectedTowns).map(t => ({...t, impact:(t.lat !== undefined && t.lng !== undefined) ? estimateImpactTime(alert, t, motion, stormOrigin) : (t.impact || "Timing not available")})),
+    affectedPOI:dedupeByName(affectedPOI).map(poi => ({...poi, impact:estimateImpactTime(alert, poi, motion, stormOrigin)})),
     impactedAreas:bulletinAreas,
     description:p.description || "",
     instruction:p.instruction || "",
@@ -1273,15 +1315,115 @@ function parseStormMotion(p){
   return { direction:match[1].toUpperCase(), speed:Number(match[2]) };
 }
 
-function estimateImpactTime(alert, point, motion){
-  if(!alert.geometry || !motion || !motion.speed) return "Timing not available";
+
+function parseStormOrigin(alert, p){
+  const text = `${p.description || ""} ${p.instruction || ""}`;
+  const match = text.match(/located\s+(?:near|over|around|approximately\s+near|\d+\s+miles?\s+[a-z]+\s+of)\s+([A-Z][A-Za-z .'-]+?)(?:,|\s+moving|\s+at\s+|\.)/i);
+
+  if(match && match[1]){
+    const placeName = cleanBulletinPlace(match[1]);
+    const known = findKnownPlace(placeName);
+    if(known) return { lat:known.lat, lng:known.lng, label:known.name, source:"bulletin" };
+  }
+
+  if(alert.geometry){
+    try{
+      const c = turf.centroid(alert);
+      const coords = c.geometry.coordinates;
+      return { lat:coords[1], lng:coords[0], label:"warning center", source:"polygon" };
+    }catch(e){}
+  }
+
+  return null;
+}
+
+function findKnownPlace(name){
+  const target = normalizeName(name);
+  if(!target) return null;
+  const knownPlaces = [...towns, ...stations, ...locations];
+  let exact = knownPlaces.find(p => normalizeName(p.name) === target);
+  if(exact) return exact;
+  return knownPlaces.find(p => {
+    const n = normalizeName(p.name);
+    return n.includes(target) || target.includes(n);
+  }) || null;
+}
+
+function directionToBearing(direction){
+  const map = {
+    N:0, NNE:22.5, NE:45, ENE:67.5,
+    E:90, ESE:112.5, SE:135, SSE:157.5,
+    S:180, SSW:202.5, SW:225, WSW:247.5,
+    W:270, WNW:292.5, NW:315, NNW:337.5
+  };
+  return map[String(direction || "").toUpperCase()] ?? null;
+}
+
+function drawStormTrack(alert){
+  const p = alert.properties || {};
+  const motion = parseStormMotion(p);
+  const origin = parseStormOrigin(alert, p);
+  if(!motion || !motion.speed || !origin) return;
+  const bearing = directionToBearing(motion.direction);
+  if(bearing === null) return;
+
+  const severity = getSeverity(p);
+  const color = severity === "tornado-emergency" ? "#ff00ff" : severity === "tornado-warning" ? "#a855f7" : "#f97316";
+  const originPoint = turf.point([origin.lng, origin.lat]);
+  const minutes = [0, 15, 30, 45, 60];
+  const points = minutes.map(min => {
+    const miles = motion.speed * (min / 60);
+    const dest = turf.destination(originPoint, miles, bearing, { units:"miles" });
+    return [dest.geometry.coordinates[1], dest.geometry.coordinates[0]];
+  });
+
+  L.polyline(points, {
+    color,
+    weight:4,
+    opacity:.95,
+    dashArray:"10 7",
+    className:"storm-track-line"
+  }).bindPopup(`<strong>${formatTitle(p)}</strong><br>Storm motion: ${motion.direction} at ${motion.speed} mph<br>Origin: ${origin.label}`).addTo(stormTrackLayer);
+
+  L.marker(points[0], {
+    icon:L.divIcon({ className:"", html:`<div class="track-origin"></div>`, iconSize:[18,18], iconAnchor:[9,9] })
+  }).bindPopup(`<strong>Storm location</strong><br>${origin.label}<br>${motion.direction} at ${motion.speed} mph`).addTo(stormTrackLayer);
+
+  [15,30,45,60].forEach((min, idx) => {
+    L.marker(points[idx + 1], {
+      interactive:false,
+      icon:L.divIcon({ className:"", html:`<div class="track-label">+${min} MIN</div>`, iconSize:[70,22], iconAnchor:[35,11] })
+    }).addTo(stormTrackLayer);
+  });
+}
+
+function pointForwardOfStorm(origin, point, bearing){
+  const angle = turf.bearing(turf.point([origin.lng, origin.lat]), turf.point([point.lng, point.lat]));
+  const diff = Math.abs(((angle - bearing + 540) % 360) - 180);
+  return diff <= 80;
+}
+
+function estimateImpactTime(alert, point, motion, stormOrigin){
+  if(!motion || !motion.speed) return "Timing not available";
+
+  const bearing = directionToBearing(motion.direction);
+  if(bearing === null) return "Timing not available";
 
   try{
-    const miles = turf.distance(turf.centroid(alert), turf.point([point.lng, point.lat]), { units:"miles" });
+    const origin = stormOrigin || parseStormOrigin(alert, alert.properties || {});
+    if(!origin) return "Timing not available";
+
+    const target = turf.point([point.lng, point.lat]);
+    const originPoint = turf.point([origin.lng, origin.lat]);
+    const miles = turf.distance(originPoint, target, { units:"miles" });
     const minutes = Math.round((miles / motion.speed) * 60);
 
-    if(minutes <= 0) return "Now";
-    if(minutes > 180) return "3+ hr";
+    if(!pointForwardOfStorm(origin, point, bearing)){
+      return "Near alert area / timing uncertain";
+    }
+
+    if(minutes <= 3) return "Now";
+    if(minutes > 120) return "2+ hr";
 
     return `~${minutes} min / ${formatTime24(new Date(Date.now() + minutes * 60000).toISOString())}`;
   }catch(e){
@@ -1343,6 +1485,7 @@ function openDetail(detail){
   document.getElementById("detailMeta").innerHTML = `
     <strong>Expires:</strong> ${formatTime24(detail.expires)}<br>
     <strong>Motion:</strong> ${detail.motion ? `${detail.motion.direction} at ${detail.motion.speed} mph` : "Not available"}<br>
+    <strong>Track Origin:</strong> ${detail.stormOrigin ? `${detail.stormOrigin.label} (${detail.stormOrigin.source})` : "Not available"}<br>
     <strong>Areas:</strong> ${formatAreas(detail.areaDesc)}
   `;
 
