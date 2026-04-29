@@ -13,7 +13,9 @@
   --red:#dc2626;
   --purple:#7e22ce;
   --dark:#080808;
-  --panel:#111;
+  --panel:#101418;
+  --border:rgba(255,255,255,.10);
+  --muted:#cbd5e1;
   --blue:#005bea;
   --mems-orange:#f47b26;
 }
@@ -23,7 +25,7 @@
 html,body{
   height:100%;
   margin:0;
-  background:var(--dark);
+  background:radial-gradient(circle at top,#111827 0%, #05070b 55%, #030407 100%);
   color:white;
   font-family:Arial, Helvetica, sans-serif;
   overflow:hidden;
@@ -36,7 +38,9 @@ body{
 
 header{
   height:58px;
-  background:#000;
+  background:rgba(2,6,12,.88);
+  backdrop-filter: blur(6px);
+  border-bottom:1px solid var(--border);
   padding:10px 18px;
   display:flex;
   justify-content:space-between;
@@ -113,7 +117,8 @@ header{
 }
 
 .panel{
-  background:var(--panel);
+  background:linear-gradient(180deg, rgba(17,24,39,.82), rgba(15,23,42,.7));
+  border-left:1px solid var(--border);
   padding:14px;
   overflow-y:auto;
   min-height:0;
@@ -121,6 +126,7 @@ header{
 
 .alert-box{
   padding:13px;
+  transition:transform .15s ease, box-shadow .2s ease;
   margin-bottom:12px;
   border-radius:8px;
   cursor:pointer;
@@ -128,14 +134,19 @@ header{
   box-shadow:0 4px 14px rgba(0,0,0,.25);
 }
 
-.alert-box.normal{background:var(--green);}
+.alert-box.normal{background:linear-gradient(135deg,#166534,#14532d);}
 .alert-box.tstorm-watch{background:#a16207;}
-.alert-box.tstorm-warning{background:var(--orange);}
-.alert-box.tornado-watch{background:var(--red);}
-.alert-box.tornado-warning{background:var(--purple);}
+.alert-box.tstorm-warning{background:linear-gradient(135deg,#ea580c,#c2410c);}
+.alert-box.tornado-watch{background:linear-gradient(135deg,#dc2626,#991b1b);}
+.alert-box.tornado-warning{background:linear-gradient(135deg,#7e22ce,#581c87);}
 .alert-box.tornado-emergency{
   background:linear-gradient(135deg,var(--red),var(--purple));
   animation:pulseEmergency 1s infinite;
+}
+
+.alert-box:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(0,0,0,.35);
 }
 
 .alert-title{
@@ -183,12 +194,21 @@ header{
 }
 
 .poi-marker{
-  background:#111;
-  border:2px solid #facc15;
+  background:rgba(251,191,36,.5);
+  border:1px solid rgba(251,191,36,.6);
   border-radius:50%;
-  width:11px;
-  height:11px;
-  box-shadow:0 0 10px rgba(250,204,21,.75);
+  width:7px;
+  height:7px;
+  opacity:.45;
+  transition:all .2s ease;
+}
+
+.poi-marker.zoomed{
+  width:12px;
+  height:12px;
+  opacity:.95;
+  border-width:2px;
+  box-shadow:0 0 12px rgba(250,204,21,.7);
 }
 
 .bottom-bar{
@@ -198,15 +218,15 @@ header{
   grid-template-columns:170px repeat(5, 1fr);
   gap:10px;
   padding:10px 12px;
-  background:linear-gradient(90deg,#000,#111);
+  background:linear-gradient(90deg,#020617,#0f172a);
   border-top:3px solid var(--mems-orange);
 }
 
 .conditions-title,
 .condition-card{
   border-radius:10px;
-  background:#171717;
-  border:1px solid rgba(255,255,255,.12);
+  background:rgba(15,23,42,.78);
+  border:1px solid var(--border);
   box-shadow:0 4px 14px rgba(0,0,0,.3);
 }
 
@@ -215,7 +235,7 @@ header{
   flex-direction:column;
   justify-content:center;
   padding:10px;
-  background:#050505;
+  background:rgba(2,6,23,.92);
 }
 
 .conditions-title span:first-child{
@@ -340,6 +360,19 @@ header{
   0%{box-shadow:0 0 0 rgba(255,0,0,0);}
   50%{box-shadow:0 0 24px rgba(255,0,255,.85);}
   100%{box-shadow:0 0 0 rgba(255,0,0,0);}
+}
+
+@media (max-width: 1200px){
+  .layout{grid-template-columns:64% 36%;}
+  .bottom-bar{grid-template-columns:140px repeat(5,1fr);}
+}
+
+@media (max-width: 980px){
+  body{overflow:auto;}
+  .layout{grid-template-columns:1fr; grid-template-rows:58vh 42vh;}
+  .panel{border-left:0; border-top:1px solid var(--border);}
+  .bottom-bar{height:auto; grid-template-columns:repeat(2,1fr);}
+  .conditions-title{grid-column:1 / -1;}
 }
 
 @keyframes pulseLightning{
@@ -483,31 +516,31 @@ const stations = [
   { name:"Arch St Station", area:"South Pulaski / Grant County", zone:["sheridan","grant"], lat:34.6174833, lng:-92.3157304 }
 ];
 
-const areasOfInterest = [
-  { name:"Greystone", area:"Cabot", lat:35.02923764117509, lng:-92.05865556970093, radius:"2 miles" },
-  { name:"Clinton Nat. Airport", area:"Little Rock", lat:34.7284011058131, lng:-92.22039216234353, radius:"1 mile" },
-  { name:"Wrightsville Correctional Unit", area:"Wrightsville", lat:34.60194061960711, lng:-92.19260013773142, radius:".25 miles" },
-  { name:"LR Air Force Base", area:"Jacksonville", lat:34.90639838445616, lng:-92.14395233018587, radius:"1 mile" },
-  { name:"LR Veterans Hospital", area:"Little Rock", lat:34.746267149080055, lng:-92.32047667930003, radius:"1 mile" },
-  { name:"UAMS", area:"Little Rock", lat:34.74744666257331, lng:-92.32088969840527, radius:".25 miles" },
-  { name:"St. Vincent Infirmary", area:"Little Rock", lat:34.75033284961561, lng:-92.33940377918991, radius:"1 mile" },
-  { name:"Baptist Med Center LR", area:"Little Rock", lat:34.74480435362505, lng:-92.38089211015347, radius:".25 miles" },
-  { name:"Arkansas Heart Hospital", area:"Little Rock", lat:34.73922859302091, lng:-92.39358428834757, radius:"1 mile" },
-  { name:"Arkansas Childrens", area:"Little Rock", lat:34.74198874170889, lng:-92.29300715213085, radius:"1 mile" },
-  { name:"Saline Memorial", area:"Benton", lat:34.57494971990144, lng:-92.59375497712537, radius:"1 mile" },
-  { name:"Baptist Springhill", area:"North Little Rock", lat:34.78394874277726, lng:-92.22312924338553, radius:"1 mile" },
-  { name:"SVI North", area:"Sherwood", lat:34.81344283040206, lng:-92.20907267741393, radius:"1 mile" },
-  { name:"Unity Jacksonville", area:"Jacksonville", lat:34.87316535170868, lng:-92.12534698787888, radius:"1 mile" },
-  { name:"Cabot Emergency Hospital", area:"Cabot", lat:34.98186175242931, lng:-92.03483579161522, radius:"1 mile" },
-  { name:"Unity Searcy", area:"Searcy", lat:35.2519019242663, lng:-91.69724613374575, radius:"1 mile" },
-  { name:"Baptist Hot Spring County", area:"Malvern", lat:34.358715333160184, lng:-92.78587668356282, radius:"1 mile" },
-  { name:"Jefferson Regional", area:"Pine Bluff", lat:34.18816847629358, lng:-92.0175729276134, radius:"1 mile" },
-  { name:"Camp Robinson Gate", area:"North Little Rock", lat:34.814341913579206, lng:-92.29026940852049, radius:"1 mile" },
-  { name:"Camp Robinson Air Field", area:"North Little Rock", lat:34.843067898247455, lng:-92.30758595632308, radius:".5 miles" },
-  { name:"NLR Airport", area:"North Little Rock", lat:34.83274690489968, lng:-92.25665331558987, radius:".5 miles" },
-  { name:"Conway Regional Medical Center", area:"Conway", lat:35.0855885850444, lng:-92.45778239317336, radius:"1 mile" },
-  { name:"Baptist Conway", area:"Conway", lat:35.0561499713529, lng:-92.41939841750165, radius:"1 mile" },
-  { name:"Pinnacle MTN", area:"Little Rock", lat:34.84164634982719, lng:-92.48591891234585, radius:".5 miles" }
+const locations = [
+  { name:"Greystone", area:"Cabot", type:"Neighborhood", lat:35.02923764117509, lng:-92.05865556970093, radius:"2 miles" },
+  { name:"Clinton Nat. Airport", area:"Little Rock", type:"Airport", lat:34.7284011058131, lng:-92.22039216234353, radius:"1 mile" },
+  { name:"Wrightsville Correctional Unit", area:"Wrightsville", type:"Correctional", lat:34.60194061960711, lng:-92.19260013773142, radius:".25 miles" },
+  { name:"LR Air Force Base", area:"Jacksonville", type:"Military", lat:34.90639838445616, lng:-92.14395233018587, radius:"1 mile" },
+  { name:"LR Veterans Hospital", area:"Little Rock", type:"Hospital", lat:34.746267149080055, lng:-92.32047667930003, radius:"1 mile" },
+  { name:"UAMS", area:"Little Rock", type:"Hospital", lat:34.74744666257331, lng:-92.32088969840527, radius:".25 miles" },
+  { name:"St. Vincent Infirmary", area:"Little Rock", type:"Hospital", lat:34.75033284961561, lng:-92.33940377918991, radius:"1 mile" },
+  { name:"Baptist Med Center LR", area:"Little Rock", type:"Hospital", lat:34.74480435362505, lng:-92.38089211015347, radius:".25 miles" },
+  { name:"Arkansas Heart Hospital", area:"Little Rock", type:"Hospital", lat:34.73922859302091, lng:-92.39358428834757, radius:"1 mile" },
+  { name:"Arkansas Childrens", area:"Little Rock", type:"Hospital", lat:34.74198874170889, lng:-92.29300715213085, radius:"1 mile" },
+  { name:"Saline Memorial", area:"Benton", type:"Hospital", lat:34.57494971990144, lng:-92.59375497712537, radius:"1 mile" },
+  { name:"Baptist Springhill", area:"North Little Rock", type:"Hospital", lat:34.78394874277726, lng:-92.22312924338553, radius:"1 mile" },
+  { name:"SVI North", area:"Sherwood", type:"Hospital", lat:34.81344283040206, lng:-92.20907267741393, radius:"1 mile" },
+  { name:"Unity Jacksonville", area:"Jacksonville", type:"Hospital", lat:34.87316535170868, lng:-92.12534698787888, radius:"1 mile" },
+  { name:"Cabot Emergency Hospital", area:"Cabot", type:"Hospital", lat:34.98186175242931, lng:-92.03483579161522, radius:"1 mile" },
+  { name:"Unity Searcy", area:"Searcy", type:"Hospital", lat:35.2519019242663, lng:-91.69724613374575, radius:"1 mile" },
+  { name:"Baptist Hot Spring County", area:"Malvern", type:"Hospital", lat:34.358715333160184, lng:-92.78587668356282, radius:"1 mile" },
+  { name:"Jefferson Regional", area:"Pine Bluff", type:"Hospital", lat:34.18816847629358, lng:-92.0175729276134, radius:"1 mile" },
+  { name:"Camp Robinson Gate", area:"North Little Rock", type:"Military", lat:34.814341913579206, lng:-92.29026940852049, radius:"1 mile" },
+  { name:"Camp Robinson Air Field", area:"North Little Rock", type:"Military", lat:34.843067898247455, lng:-92.30758595632308, radius:".5 miles" },
+  { name:"NLR Airport", area:"North Little Rock", type:"Airport", lat:34.83274690489968, lng:-92.25665331558987, radius:".5 miles" },
+  { name:"Conway Regional Medical Center", area:"Conway", type:"Hospital", lat:35.0855885850444, lng:-92.45778239317336, radius:"1 mile" },
+  { name:"Baptist Conway", area:"Conway", type:"Hospital", lat:35.0561499713529, lng:-92.41939841750165, radius:"1 mile" },
+  { name:"Pinnacle MTN", area:"Little Rock", type:"Landmark", lat:34.84164634982719, lng:-92.48591891234585, radius:".5 miles" }
 ];
 
 const towns = [
@@ -600,27 +633,37 @@ stations.forEach(station => {
     .addTo(stationLayer);
 });
 
-areasOfInterest.forEach(poi => {
+locations.forEach(location => {
   const icon = L.divIcon({
     className:"",
-    html:`<div class="poi-marker"></div>`,
+    html:`<div class="poi-marker" id="location-marker-${slug(location.name)}"></div>`,
     iconSize:[15,15],
     iconAnchor:[7,7]
   });
 
-  L.marker([poi.lat, poi.lng], { icon })
-    .bindPopup(`<strong>${poi.name}</strong><br>Watch radius: ${poi.radius || "N/A"}`)
+  L.marker([location.lat, location.lng], { icon })
+    .bindPopup(`<strong>${location.name}</strong><br>Type: ${location.type}<br>Watch radius: ${location.radius || "N/A"}`)
     .addTo(poiLayer);
 });
 
 L.control.layers(null, {
   "Stations": stationLayer,
-  "Areas of Interest": poiLayer,
+  "Locations": poiLayer,
   "Warning Polygons": warningLayer
 }, {
   collapsed:false,
   position:"topleft"
 }).addTo(map);
+
+function updateLocationMarkerProminence(){
+  const isZoomedIn = map.getZoom() >= 10;
+  document.querySelectorAll(".poi-marker").forEach(el => {
+    el.classList.toggle("zoomed", isZoomedIn);
+  });
+}
+
+map.on("zoomend", updateLocationMarkerProminence);
+updateLocationMarkerProminence();
 
 async function loadTempestConditions(){
   if(!TEMPEST_STATION_ID || TEMPEST_TOKEN === "PASTE_YOUR_TOKEN_HERE"){
@@ -1044,8 +1087,8 @@ function buildAlertDetail(alert){
       if(turf.booleanPointInPolygon(turf.point([town.lng, town.lat]), alert)) affectedTowns.push(town);
     });
 
-    areasOfInterest.forEach(poi => {
-      if(turf.booleanPointInPolygon(turf.point([poi.lng, poi.lat]), alert)) affectedPOI.push(poi);
+    locations.forEach(location => {
+      if(turf.booleanPointInPolygon(turf.point([location.lng, location.lat]), alert)) affectedPOI.push(location);
     });
   }else{
     const area = p.areaDesc || "";
@@ -1058,8 +1101,8 @@ function buildAlertDetail(alert){
       if(areaLooksRelevantToTown(area, town)) affectedTowns.push(town);
     });
 
-    areasOfInterest.forEach(poi => {
-      if(areaLooksRelevantToPOI(area, poi)) affectedPOI.push(poi);
+    locations.forEach(location => {
+      if(areaLooksRelevantToPOI(area, location)) affectedPOI.push(location);
     });
   }
 
@@ -1109,9 +1152,9 @@ function areaLooksRelevantToTown(area, town){
   });
 }
 
-function areaLooksRelevantToPOI(area, poi){
+function areaLooksRelevantToPOI(area, location){
   const a = area.toLowerCase();
-  const p = `${poi.name} ${poi.area}`.toLowerCase();
+  const p = `${location.name} ${location.area}`.toLowerCase();
 
   if(p.includes("cabot")) return a.includes("lonoke");
   if(p.includes("lonoke")) return a.includes("lonoke");
@@ -1205,17 +1248,19 @@ function openDetail(detail){
     <strong>Areas:</strong> ${formatAreas(detail.areaDesc)}
   `;
 
-  const stationItems = detail.affectedStations.length
-    ? detail.affectedStations.map(s => `<li>${s.name} — <strong>${s.impact}</strong></li>`).join("")
-    : "<li>No MEMS stations currently inside this alert area.</li>";
+  const stationItems = formatCondensedAlphabetizedList(
+    detail.affectedStations,
+    s => `${s.name} <strong>(${s.impact})</strong>`,
+    "No MEMS stations currently inside this alert area."
+  );
 
-  const townItems = detail.affectedTowns.length
-    ? detail.affectedTowns.map(t => `<li>${t.name} — <strong>${t.impact}</strong></li>`).join("")
-    : "<li>No tracked towns currently inside this alert area.</li>";
+  const townItems = formatCondensedAlphabetizedList(
+    detail.affectedTowns,
+    t => `${t.name} <strong>(${t.impact})</strong>`,
+    "No tracked towns currently inside this alert area."
+  );
 
-  const poiItems = detail.affectedPOI.length
-    ? detail.affectedPOI.map(p => `<li>${p.name} — <strong>${p.impact}</strong></li>`).join("")
-    : "<li>No areas of interest currently inside this alert area.</li>";
+  const locationItems = formatLocationsByType(detail.affectedPOI);
 
   document.getElementById("detailBody").innerHTML = `
     <div class="detail-section">
@@ -1229,8 +1274,8 @@ function openDetail(detail){
     </div>
 
     <div class="detail-section">
-      <strong>Areas of Interest</strong>
-      <ul class="detail-list">${poiItems}</ul>
+      <strong>Locations</strong>
+      <ul class="detail-list">${locationItems}</ul>
     </div>
 
     <div class="detail-section">
@@ -1240,6 +1285,36 @@ function openDetail(detail){
   `;
 
   document.getElementById("detailOverlay").style.display = "flex";
+}
+
+
+function formatCondensedAlphabetizedList(items, renderItem, emptyMessage){
+  if(!items.length) return `<li>${emptyMessage}</li>`;
+
+  return [...items]
+    .sort((a,b) => a.name.localeCompare(b.name))
+    .map(item => `<li>${renderItem(item)}</li>`)
+    .join("");
+}
+
+function formatLocationsByType(locationsList){
+  if(!locationsList.length) return "<li>No locations currently inside this alert area.</li>";
+
+  const groups = {};
+  locationsList.forEach(location => {
+    const type = location.type || "Other";
+    if(!groups[type]) groups[type] = [];
+    groups[type].push(location);
+  });
+
+  return Object.keys(groups)
+    .sort((a,b) => a.localeCompare(b))
+    .map(type => {
+      const sorted = groups[type].sort((a,b) => a.name.localeCompare(b.name));
+      const entries = sorted.map(l => `${l.name} <strong>(${l.impact})</strong>`).join(", ");
+      return `<li><strong>${type}:</strong> ${entries}</li>`;
+    })
+    .join("");
 }
 
 function closeDetail(){
