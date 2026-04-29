@@ -1076,7 +1076,7 @@ function buildAlertDetail(alert){
   const motion = parseStormMotion(p);
   const affectedStations = [];
   const affectedTowns = [];
-  const alertAreaNames = extractImpactedLocations(p);
+  const alertAreaNames = extractAreaNames(p.areaDesc);
   const affectedPOI = [];
 
   if(alert.geometry){
@@ -1178,28 +1178,6 @@ function areaLooksRelevantToPOI(area, location){
   if(p.includes("pine bluff")) return a.includes("jefferson");
 
   return a.includes("pulaski");
-}
-
-function extractImpactedLocations(p){
-  const impacted = extractLocationsImpactedInclude(`${p.description || ""}\n${p.instruction || ""}`);
-  if(impacted.length) return impacted;
-
-  return extractAreaNames(p.areaDesc);
-}
-
-function extractLocationsImpactedInclude(text){
-  if(!text) return [];
-
-  const match = text.match(/locations\s+impacted\s+include\s*\.\.\.\s*([\s\S]*?)(?:\n\n|\*|PRECAUTIONARY|HAZARD|SOURCE|IMPACT|TORNADO|SEVERE|TIME|MOTION|$)/i);
-  if(!match) return [];
-
-  return [...new Set(
-    match[1]
-      .replace(/\n+/g, ' ')
-      .split(/,|\.\s+/)
-      .map(name => name.replace(/\s+/g, ' ').trim())
-      .filter(Boolean)
-  )];
 }
 
 function extractAreaNames(areaDesc){
