@@ -1,31 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MEMS Weather Center</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<link rel="stylesheet" href="assets/css/weather-center.css" />
+  <!-- =========================
+       META
+  ========================== -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>MEMS Weather Center</title>
+
+  <!-- =========================
+       STYLES
+  ========================== -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="assets/css/weather-center.css" />
 </head>
+
 <body>
-<div class="beta-bar">⚠&nbsp;&nbsp;STORM TRACKING IN BETA TESTING&nbsp;&nbsp;⚠</div>
-<header><div class="header-title">MEMS WEATHER CENTER</div><div></div><div class="header-info"><div>Information Time:<strong id="infoTime">--:--</strong></div><div>Next Refresh: <span id="refreshCountdown">60s</span></div></div></header>
-<div class="top-bar">
-  <div class="zone normal" data-zone="metro"><button class="zone-btn" onclick="openZoneDetail('metro')">METRO</button></div>
-  <div class="zone normal" data-zone="maumelle"><button class="zone-btn" onclick="openZoneDetail('maumelle')">MAUMELLE</button></div>
-  <div class="zone normal" data-zone="north-pulaski"><button class="zone-btn" onclick="openZoneDetail('north-pulaski')">NORTH PULASKI</button></div>
-  <div class="zone normal" data-zone="arch-street"><button class="zone-btn" onclick="openZoneDetail('arch-street')">ARCH ST</button></div>
-  <div class="zone normal" data-zone="lonoke"><button class="zone-btn" onclick="openZoneDetail('lonoke')">LONOKE CO</button></div>
-  <div class="zone normal" data-zone="grant"><button class="zone-btn" onclick="openZoneDetail('grant')">GRANT COUNTY</button></div>
-</div>
-<div class="layout"><aside class="control-rail"><section class="map-controls"><div class="controls-title">MAP CONTROLS<label class="control-row">
-  <span>Service Area</span>
-  <input type="checkbox" class="toggle" checked onchange="setLayerVisible('serviceArea', this.checked)">
-</label></div><label class="control-row"><span>Radar Reflectivity</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('radar',this.checked)"></label><div class="legend-block"><div>Legend: dBZ</div><div class="dbz-bar"></div><div class="dbz-scale"><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>70</span><span>80</span></div></div><label class="control-row"><span>Storm Tracks</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('tracks',this.checked)"></label><label class="control-row"><span>Stations</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('stations',this.checked)"></label><label class="control-row"><span>Points of Interest</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('poi',this.checked)"></label><label class="control-row"><span>Warning Polygons</span><input type="checkbox" class="toggle" checked onchange="setLayerVisible('warnings',this.checked)"></label><div class="controls-title small">TRACK TIME STEPS</div><div class="track-buttons"><button data-track-minutes="15" onclick="setTrackWindow(15)">15 min</button><button data-track-minutes="30" onclick="setTrackWindow(30)">30 min</button><button data-track-minutes="45" onclick="setTrackWindow(45)">45 min</button><button class="active" data-track-minutes="60" onclick="setTrackWindow(60)">60 min</button></div></section></aside><main class="map-wrap"><div id="map"></div></main><aside class="panel"><div id="alerts"></div></aside></div>
-<div class="bottom-bar"><div class="conditions-title"><span>STATION 1</span><span>LIVE WEATHER</span></div><div class="condition-card temp" id="tempCard"><div class="label">TEMP</div><div class="value" id="tempValue">--°</div><div class="sub" id="humidityValue">Humidity --%</div></div><div class="condition-card rain" id="rainCard"><div class="label">RAIN</div><div class="value" id="rainValue">--&quot;</div><div class="sub" id="rainRateValue">Rate --&quot;/hr</div></div><div class="condition-card wind" id="windCard"><div class="label">WIND</div><div class="value" id="windValue">--G--</div><div class="sub" id="windSubValue">Direction --</div></div><div class="condition-card lightning" id="lightningCard"><div class="label">LIGHTNING</div><div class="value" id="lightningValue">NONE</div><div class="sub" id="lightningSubValue">No recent strike</div></div><div class="condition-card updated" id="updatedCard"><div class="label">TEMPEST UPDATED</div><div class="value" id="tempestUpdatedValue">--:--</div><div class="sub" id="tempestAgeValue">Waiting for data</div></div><section class="station-summary"><div class="station-summary-title">MEMS STATIONS</div><div class="station-summary-row"><span><i class="station-dot online"></i>Online <strong id="stationOnlineCount">0</strong></span><span><i class="station-dot impacted"></i>Impacted <strong id="stationImpactedCount">0</strong></span><span><i class="station-dot poi"></i>POI <strong id="poiCount">0</strong></span></div><button class="station-list-btn" onclick="openStationList()">VIEW STATION LIST</button></section></div>
-<div id="detailOverlay"><div class="detail-card"><div class="detail-header"><div><div class="detail-title" id="detailTitle"></div><div class="alert-meta" id="detailMeta"></div></div><button class="close-btn" onclick="closeDetail()">CLOSE</button></div><div id="detailBody"></div></div></div>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script><script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-<script src="assets/data/weather-database.js"></script>
-<script src="assets/js/weather-center.js"></script>
+
+  <!-- =========================
+       BETA BAR
+  ========================== -->
+  <div class="beta-bar">
+    ⚠ STORM TRACKING IN BETA TESTING ⚠
+  </div>
+
+  <!-- =========================
+       HEADER
+  ========================== -->
+  <header>
+    <div class="header-title">MEMS WEATHER CENTER</div>
+
+    <div class="header-info">
+      <div>
+        Information Time:
+        <strong id="infoTime">--:--</strong>
+      </div>
+      <div>
+        Next Refresh:
+        <span id="refreshCountdown">60s</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================
+       ZONE BAR
+  ========================== -->
+  <div class="top-bar">
+    <div class="zone normal" data-zone="metro">
+      <button class="zone-btn" onclick="openZoneDetail('metro')">METRO</button>
+    </div>
+
+    <div class="zone normal" data-zone="maumelle">
+      <button class="zone-btn" onclick="openZoneDetail('maumelle')">MAUMELLE</button>
+    </div>
+
+    <div class="zone normal" data-zone="north-pulaski">
+      <button class="zone-btn" onclick="openZoneDetail('north-pulaski')">NORTH PULASKI</button>
+    </div>
+
+    <div class="zone normal" data-zone="arch-street">
+      <button class="zone-btn" onclick="openZoneDetail('arch-street')">ARCH ST</button>
+    </div>
+
+    <div class="zone normal" data-zone="lonoke">
+      <button class="zone-btn" onclick="openZoneDetail('lonoke')">LONOKE CO</button>
+    </div>
+
+    <div class="zone normal" data-zone="grant">
+      <button class="zone-btn" onclick="openZoneDetail('grant')">GRANT COUNTY</button>
+    </div>
+  </div>
+
+  <!-- =========================
+       MAIN LAYOUT
+  ========================== -->
+  <div class="layout">
+
+    <!-- ===== LEFT CONTROL RAIL ===== -->
+    <aside class="control-rail">
+      <section class="map-controls">
+
+        <div class="controls-title">MAP CONTROLS</div>
+
+        <!-- Toggles -->
+        <label class="control-row">
+          <span>Service Area</span>
+          <input type="checkbox" checked onchange="setLayerVisible('serviceArea', this.checked)">
+        </label>
+        
+        <label class="control-row">
+          <span>LZK Warning Area</span>
+          <input type="checkbox" checked onchange="setLayerVisible('lzkArea', this.checked)">
+        </label>
+
+        <label class="control-row">
+          <span>Radar Reflectivity</span>
+          <input type="checkbox" checked onchange="setLayerVisible('radar', this.checked)">
+        </label>
+
+        <label class="control-row">
+          <span>Storm Tracks</span>
+          <input type="checkbox" checked onchange="setLayerVisible('tracks', this.checked)">
+        </label>
+
+        <label class="control-row">
+          <span>Stations</span>
+          <input type="checkbox" checked onchange="setLayerVisible('stations', this.checked)">
+        </label>
+
+        <label class="control-row">
+          <span>Points of Interest</span>
+          <input type="checkbox" checked onchange="setLayerVisible('poi', this.checked)">
+        </label>
+
+        <label class="control-row">
+          <span>Warning Polygons</span>
+          <input type="checkbox" checked onchange="setLayerVisible('warnings', this.checked)">
+        </label>
+
+        <!-- Radar Legend -->
+        <div class="legend-block">
+          <div>Legend: dBZ</div>
+          <div class="dbz-bar"></div>
+          <div class="dbz-scale">
+            <span>10</span><span>20</span><span>30</span><span>40</span>
+            <span>50</span><span>60</span><span>70</span><span>80</span>
+          </div>
+        </div>
+
+        <!-- Track Time -->
+        <div class="controls-title small">TRACK TIME STEPS</div>
+        <div class="track-buttons">
+          <button onclick="setTrackWindow(15)">15 min</button>
+          <button onclick="setTrackWindow(30)">30 min</button>
+          <button onclick="setTrackWindow(45)">45 min</button>
+          <button class="active" onclick="setTrackWindow(60)">60 min</button>
+        </div>
+
+      </section>
+    </aside>
+
+    <!-- ===== MAP ===== -->
+    <main class="map-wrap">
+      <div id="map"></div>
+    </main>
+
+    <!-- ===== ALERT PANEL ===== -->
+    <aside class="panel">
+      <div id="alerts"></div>
+    </aside>
+
+  </div>
+
+  <!-- =========================
+       BOTTOM BAR (TEMPEST)
+  ========================== -->
+  <div class="bottom-bar">
+
+    <div class="conditions-title">
+      <span>STATION 1</span>
+      <span>LIVE WEATHER</span>
+    </div>
+
+    <!-- TEMP -->
+    <div class="condition-card temp">
+      <div class="label">TEMP</div>
+      <div class="value" id="tempValue">--°</div>
+      <div class="sub" id="humidityValue">Humidity --%</div>
+    </div>
+
+    <!-- RAIN -->
+    <div class="condition-card rain">
+      <div class="label">RAIN</div>
+      <div class="value" id="rainValue">--"</div>
+      <div class="sub" id="rainRateValue">Rate --"/hr</div>
+    </div>
+
+    <!-- WIND -->
+    <div class="condition-card wind">
+      <div class="label">WIND</div>
+      <div class="value" id="windValue">--G--</div>
+      <div class="sub" id="windSubValue">Direction --</div>
+    </div>
+
+    <!-- LIGHTNING -->
+    <div class="condition-card lightning">
+      <div class="label">LIGHTNING</div>
+      <div class="value" id="lightningValue">NONE</div>
+      <div class="sub" id="lightningSubValue">No recent strike</div>
+    </div>
+
+    <!-- UPDATED -->
+    <div class="condition-card updated">
+      <div class="label">TEMPEST UPDATED</div>
+      <div class="value" id="tempestUpdatedValue">--:--</div>
+      <div class="sub" id="tempestAgeValue">Waiting for data</div>
+    </div>
+
+    <!-- STATION SUMMARY -->
+    <section class="station-summary">
+      <div class="station-summary-title">MEMS STATIONS</div>
+
+      <div class="station-summary-row">
+        <span><i class="station-dot online"></i>Online <strong id="stationOnlineCount">0</strong></span>
+        <span><i class="station-dot impacted"></i>Impacted <strong id="stationImpactedCount">0</strong></span>
+        <span><i class="station-dot poi"></i>POI <strong id="poiCount">0</strong></span>
+      </div>
+
+      <button class="station-list-btn" onclick="openStationList()">
+        VIEW STATION LIST
+      </button>
+    </section>
+
+  </div>
+
+  <!-- =========================
+       DETAIL OVERLAY
+  ========================== -->
+  <div id="detailOverlay">
+    <div class="detail-card">
+
+      <div class="detail-header">
+        <div>
+          <div class="detail-title" id="detailTitle"></div>
+          <div class="alert-meta" id="detailMeta"></div>
+        </div>
+
+        <button class="close-btn" onclick="closeDetail()">CLOSE</button>
+      </div>
+
+      <div id="detailBody"></div>
+
+    </div>
+  </div>
+
+  <!-- =========================
+       SCRIPTS
+  ========================== -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+  <script src="assets/data/weather-database.js"></script>
+  <script src="assets/js/weather-center.js"></script>
+
 </body>
 </html>
