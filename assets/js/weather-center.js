@@ -108,7 +108,7 @@ async function loadServiceArea() {
 }
 
 loadServiceArea();
-const serviceAreaLayer = L.geoJSON(null, {
+const lkzAreaLayer = L.geoJSON(null, {
   style: {
     color: "#005bea",
     weight: 2,
@@ -132,8 +132,8 @@ async function loadlzkArea() {
 
     console.log("Service area loaded:", data);
 
-    serviceAreaLayer.clearLayers();
-    serviceAreaLayer.addData(data);
+   lkzAreaLayer.clearLayers();
+    lkzAreaLayer.addData(data);
 
   } catch (err) {
     console.error("Unable to load LZK area boundary:", err);
@@ -207,7 +207,7 @@ L.control.layers(null,{
 }).addTo(map);
 function setLayerVisible(name,on){
     const layers={
-        radar:radarLayer,serviceArea: serviceAreaLayer,tracks:stormTrackLayer,stations:stationLayer,poi:poiLayer,warnings:warningLayer
+        radar:radarLayer,serviceArea:serviceAreaLayer,NWSwfo:  lkzAreaLayer, tracks:stormTrackLayer,stations:stationLayer,poi:poiLayer,warnings:warningLayer
     };
 
     const l=layers[name];
@@ -729,6 +729,7 @@ function formatAreas(areaDesc){if(!areaDesc)return"None listed";const a=areaDesc
 function updateRefreshCountdown(){secondsUntilRefresh--;if(secondsUntilRefresh<=0){secondsUntilRefresh=REFRESH_SECONDS;loadAlerts();loadCustomStormTracks()}refreshCountdown.textContent=secondsUntilRefresh+"s"} function updateConditionCardClasses(gust,lightning,age){windCard.className="condition-card wind";lightningCard.className="condition-card lightning";updatedCard.className="condition-card updated";if(gust>=50)windCard.classList.add("warn");else if(gust>=35)windCard.classList.add("caution");if(lightning!==null&&lightning<=10)lightningCard.classList.add("lightning-near");else if(lightning!==null&&lightning<=20)lightningCard.classList.add("caution");if(age!==null&&age>180)updatedCard.classList.add("warn");else if(age!==null&&age>90)updatedCard.classList.add("caution")} function setTempestUnavailable(reason){tempValue.textContent="--°";humidityValue.textContent=reason;rainValue.textContent="--";rainRateValue.textContent="Rate --";windValue.textContent="--G--";windSubValue.textContent="Direction --";lightningValue.textContent="--";lightningSubValue.textContent="Unavailable";tempestUpdatedValue.textContent="--:--";tempestAgeValue.textContent="Tempest unavailable"}
 updateStationSummary();
 loadServiceArea();
+loadlzkArea();
 loadAlerts();
 loadTempestConditions();
 loadOutlookData();
