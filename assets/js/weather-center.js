@@ -83,16 +83,17 @@ const serviceAreaLayer = L.geoJSON(null, {
     fillColor: "#005bea",
     fillOpacity: 0.08
   },
-  onEachFeature: (feature, layer) => {
-    const name =
-      feature.properties?.name ||
-      feature.properties?.Name ||
-      feature.properties?.NAME ||
-      "MEMS Service Area";
+  //searvice area pop up -- killed//
+   //onEachFeature: (feature, layer) => {
+    //const name =
+      //feature.properties?.name ||
+      //feature.properties?.Name ||
+      //feature.properties?.NAME ||
+      //"MEMS Service Area";
 
-    layer.bindPopup(`<strong>${name}</strong>`);
-  }
-}).addTo(map);
+    //layer.bindPopup(`<strong>${name}</strong>`);
+  //}
+//}).addTo(map);
 
 /* =========================
    AREA BUTTONS FROM DATABASE
