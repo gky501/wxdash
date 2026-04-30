@@ -75,6 +75,24 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 map.on("mousemove dragstart zoomstart movestart", () => {
     lastUserMapActivity = Date.now();
 });
+const serviceAreaLayer = L.geoJSON(null, {
+  style: {
+    color: "#005bea",
+    weight: 3,
+    opacity: 0.95,
+    fillColor: "#005bea",
+    fillOpacity: 0.08
+  },
+  onEachFeature: (feature, layer) => {
+    const name =
+      feature.properties?.name ||
+      feature.properties?.Name ||
+      feature.properties?.NAME ||
+      "MEMS Service Area";
+
+    layer.bindPopup(`<strong>${name}</strong>`);
+  }
+}).addTo(map);
 
 /* =========================
    AREA BUTTONS FROM DATABASE
@@ -142,7 +160,7 @@ L.control.layers(null,{
 }).addTo(map);
 function setLayerVisible(name,on){
     const layers={
-        radar:radarLayer,tracks:stormTrackLayer,stations:stationLayer,poi:poiLayer,warnings:warningLayer
+        radar:radarLayer,serviceArea: serviceAreaLayer,tracks:stormTrackLayer,stations:stationLayer,poi:poiLayer,warnings:warningLayer
     };
 
     const l=layers[name];
@@ -187,6 +205,25 @@ async function loadTempestConditions(){
         setTempestUnavailable(e.message)
     }
 
+}
+async function loadServiceArea() {
+  try {
+    const res = await fetch("assets/data/service-map.geojson", {
+      cache: "no-store"
+    });
+
+    if (!res.ok) {
+      throw new Error("Service area GeoJSON failed: " + res.status);
+    }
+
+    const data = await res.json();
+
+    serviceAreaLayer.clearLayers();
+    serviceAreaLayer.addData(data);
+
+  } catch (err) {
+    console.error("Unable to load service area boundary:", err);
+  }
 }
 
 async function loadOutlookData(){
@@ -644,6 +681,7 @@ function updateStationSummary(){stationOnlineCount.textContent=stations.length;s
 function formatAreas(areaDesc){if(!areaDesc)return"None listed";const a=areaDesc.split(";").map(x=>x.trim()).filter(Boolean);return a.length<=8?a.join(", "):a.slice(0,8).join(", ")+`, +${a.length-8} more`} function formatTime24(v){if(!v)return"N/A";return new Date(v).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:false})} function sortAlerts(a,b){const r={"tornado-emergency":5,"tornado-warning":4,"tornado-watch":3,"tstorm-warning":2,"tstorm-watch":1,normal:0};return r[getSeverity(b.properties)]-r[getSeverity(a.properties)]} function slug(v){return String(v).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")} function cToF(c){return c==null?"--":Math.round(c*9/5+32)} function msToMph(ms){return ms==null?"--":Math.round(ms*2.23694)} function mmToIn(mm){return mm==null?"--":(mm/25.4).toFixed(2)} function safeRound(v){return v==null?"--":Math.round(v)} function degToCompass(deg){if(deg==null)return"--";const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];return dirs[Math.round(deg/22.5)%16]}
 function updateRefreshCountdown(){secondsUntilRefresh--;if(secondsUntilRefresh<=0){secondsUntilRefresh=REFRESH_SECONDS;loadAlerts();loadCustomStormTracks()}refreshCountdown.textContent=secondsUntilRefresh+"s"} function updateConditionCardClasses(gust,lightning,age){windCard.className="condition-card wind";lightningCard.className="condition-card lightning";updatedCard.className="condition-card updated";if(gust>=50)windCard.classList.add("warn");else if(gust>=35)windCard.classList.add("caution");if(lightning!==null&&lightning<=10)lightningCard.classList.add("lightning-near");else if(lightning!==null&&lightning<=20)lightningCard.classList.add("caution");if(age!==null&&age>180)updatedCard.classList.add("warn");else if(age!==null&&age>90)updatedCard.classList.add("caution")} function setTempestUnavailable(reason){tempValue.textContent="--°";humidityValue.textContent=reason;rainValue.textContent="--";rainRateValue.textContent="Rate --";windValue.textContent="--G--";windSubValue.textContent="Direction --";lightningValue.textContent="--";lightningSubValue.textContent="Unavailable";tempestUpdatedValue.textContent="--:--";tempestAgeValue.textContent="Tempest unavailable"}
 updateStationSummary();
+loadServiceArea();
 loadAlerts();
 loadTempestConditions();
 loadOutlookData();
