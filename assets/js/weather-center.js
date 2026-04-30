@@ -108,6 +108,39 @@ async function loadServiceArea() {
 }
 
 loadServiceArea();
+const serviceAreaLayer = L.geoJSON(null, {
+  style: {
+    color: "#005bea",
+    weight: 2,
+    opacity: 0.40,
+    fillColor: "#005bea",
+    fillOpacity: 0.0
+  },
+}).addTo(map);
+
+async function loadlzkArea() {
+  try {
+    const res = await fetch("assets/data/lzk_wfo.geojson", {
+      cache: "no-store"
+    });
+
+    if (!res.ok) {
+      throw new Error("Service area GeoJSON failed: " + res.status);
+    }
+
+    const data = await res.json();
+
+    console.log("Service area loaded:", data);
+
+    serviceAreaLayer.clearLayers();
+    serviceAreaLayer.addData(data);
+
+  } catch (err) {
+    console.error("Unable to load LZK area boundary:", err);
+  }
+}
+
+loadlzkArea();
 /* =========================
    AREA BUTTONS FROM DATABASE
 ========================= */
