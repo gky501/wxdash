@@ -84,6 +84,31 @@ const serviceAreaLayer = L.geoJSON(null, {
     fillOpacity: 0.0
   },
 });
+}).addTo(map);
+
+async function loadServiceArea() {
+  try {
+    const res = await fetch("assets/data/service-map.geojson", {
+      cache: "no-store"
+    });
+
+    if (!res.ok) {
+      throw new Error("Service area GeoJSON failed: " + res.status);
+    }
+
+    const data = await res.json();
+
+    console.log("Service area loaded:", data);
+
+    serviceAreaLayer.clearLayers();
+    serviceAreaLayer.addData(data);
+
+  } catch (err) {
+    console.error("Unable to load service area boundary:", err);
+  }
+}
+
+loadServiceArea();
 /* =========================
    AREA BUTTONS FROM DATABASE
 ========================= */
