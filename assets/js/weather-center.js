@@ -77,9 +77,9 @@ map.on("mousemove dragstart zoomstart movestart", () => {
 });
 const serviceAreaLayer = L.geoJSON(null, {
   style: {
-    color: "#000",
-    weight: 1,
-    opacity: 0.95,
+    color: "#000000",
+    weight: 2,
+    opacity: 0.75,
     fillColor: "#005bea",
     fillOpacity: 0.0
   },
