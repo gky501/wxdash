@@ -83,7 +83,7 @@ const serviceAreaLayer = L.geoJSON(null, {
     fillColor: "#005bea",
     fillOpacity: 0.0
   },
-
+});
 /* =========================
    AREA BUTTONS FROM DATABASE
 ========================= */
