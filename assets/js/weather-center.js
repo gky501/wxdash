@@ -77,23 +77,12 @@ map.on("mousemove dragstart zoomstart movestart", () => {
 });
 const serviceAreaLayer = L.geoJSON(null, {
   style: {
-    color: "#005bea",
-    weight: 3,
+    color: "#fff",
+    weight: 1,
     opacity: 0.95,
     fillColor: "#005bea",
-    fillOpacity: 0.08
+    fillOpacity: 0.0
   },
-  //searvice area pop up -- killed//
-   //onEachFeature: (feature, layer) => {
-    //const name =
-      //feature.properties?.name ||
-      //feature.properties?.Name ||
-      //feature.properties?.NAME ||
-      //"MEMS Service Area";
-
-    //layer.bindPopup(`<strong>${name}</strong>`);
-  //}
-//}).addTo(map);
 
 /* =========================
    AREA BUTTONS FROM DATABASE
