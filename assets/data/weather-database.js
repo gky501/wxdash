@@ -433,7 +433,7 @@ window.MEMS_WEATHER_DATABASE = {
       "countyCodes": [
         "ARC053"
       ],
-      "lat": 34.307,
+      "lat": 39.307,
       "lng": -92.4013
     }
   ]
