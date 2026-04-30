@@ -225,7 +225,7 @@ window.MEMS_WEATHER_DATABASE = {
         "ARC053"
       ],
       "lat": 34.3073,
-      "lng": -92.3963
+      "lng": -92.4032
     }
   ],
   "locations": [
