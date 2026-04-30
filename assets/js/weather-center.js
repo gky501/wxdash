@@ -83,7 +83,6 @@ const serviceAreaLayer = L.geoJSON(null, {
     fillColor: "#005bea",
     fillOpacity: 0.0
   },
-});
 }).addTo(map);
 
 async function loadServiceArea() {
