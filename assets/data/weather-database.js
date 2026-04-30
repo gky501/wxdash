@@ -224,8 +224,8 @@ window.MEMS_WEATHER_DATABASE = {
       "countyCodes": [
         "ARC053"
       ],
-      "lat": 34.3073,
-      "lng": -92.4032
+      "lat": 34.30441392463485,
+      "lng": -92.40322502934778
     }
   ],
   "locations": [
