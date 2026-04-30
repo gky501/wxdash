@@ -79,7 +79,7 @@ const serviceAreaLayer = L.geoJSON(null, {
   style: {
     color: "#000000",
     weight: 2,
-    opacity: 0.75,
+    opacity: 0.40,
     fillColor: "#005bea",
     fillOpacity: 0.0
   },
