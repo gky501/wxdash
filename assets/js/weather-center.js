@@ -1,155 +1,110 @@
-const TEMPEST_STATION_ID="136293";
-const TEMPEST_TOKEN="a394fe76-fe00-4227-836b-f574a15ce385";
-const REFRESH_SECONDS=60, USER_ACTIVITY_HOLD_MS=5*60*1000;
-let secondsUntilRefresh=REFRESH_SECONDS,lastUserMapActivity=0,latestPanelAlerts=[],latestAllArkansasAlerts=[],latestCustomStormTracks=[],activeTrackId=null,impactedStationNames=new Set(),TRACK_WINDOW_MINUTES=60;
-let outlookData={
-    tornado:null,hail:null,wind:null,excessiveRain:null
+/* =========================================================
+   MEMS WEATHER CENTER
+   File: wxdash/assets/js/weather-center.js
+
+   Load order required:
+   1. assets/data/weather-database.js
+   2. assets/js/weather-center.js
+
+   The database file may use either:
+   - window.MEMS_WEATHER_DB
+   - window.MEMS_WEATHER_DATABASE
+========================================================= */
+
+const TEMPEST_STATION_ID = "136293";
+const TEMPEST_TOKEN = "a394fe76-fe00-4227-836b-f574a15ce385";
+
+const REFRESH_SECONDS = 60;
+const USER_ACTIVITY_HOLD_MS = 5 * 60 * 1000;
+
+let secondsUntilRefresh = REFRESH_SECONDS;
+let lastUserMapActivity = 0;
+let latestPanelAlerts = [];
+let latestAllArkansasAlerts = [];
+let latestCustomStormTracks = [];
+let activeTrackId = null;
+let impactedStationNames = new Set();
+let TRACK_WINDOW_MINUTES = 60;
+
+let outlookData = {
+    tornado: null,
+    hail: null,
+    wind: null,
+    excessiveRain: null
 };
+
+/* =========================
+   DATABASE
+========================= */
+
+const WEATHER_DATABASE = window.MEMS_WEATHER_DB || window.MEMS_WEATHER_DATABASE;
+
+if (!WEATHER_DATABASE) {
+    throw new Error("Weather database missing. Load assets/data/weather-database.js before assets/js/weather-center.js");
+}
+
+const areaButtons = Array.isArray(WEATHER_DATABASE.areaButtons) ? WEATHER_DATABASE.areaButtons : [];
+const stations = Array.isArray(WEATHER_DATABASE.stations) ? WEATHER_DATABASE.stations : [];
+const locations = Array.isArray(WEATHER_DATABASE.locations) ? WEATHER_DATABASE.locations : [];
+const towns = Array.isArray(WEATHER_DATABASE.towns) ? WEATHER_DATABASE.towns : [];
+const zoneProfiles = WEATHER_DATABASE.zoneProfiles || Object.fromEntries(
+    areaButtons.map(area => [area.id, {
+        title: area.title || area.label || area.id,
+        center: area.center,
+        stations: area.stations || []
+    }])
+);
+
+/* =========================
+   MAP SETUP
+========================= */
 
 const AR_BOUNDS = L.latLngBounds([33.00, -94.75], [36.65, -89.55]);
 const AR_CENTER = [34.75, -92.25];
 const AR_ZOOM = 7;
-const map=L.map("map",{
-    worldCopyJump:false
-}).setView(AR_CENTER,AR_ZOOM);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
-    maxZoom:20,attribution:"© OpenStreetMap © CARTO"
+
+const map = L.map("map", {
+    worldCopyJump: false
+}).setView(AR_CENTER, AR_ZOOM);
+
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    maxZoom: 20,
+    attribution: "© OpenStreetMap © CARTO"
 }).addTo(map);
-map.on("mousemove dragstart zoomstart movestart",()=>{
-    lastUserMapActivity=Date.now()
+
+map.on("mousemove dragstart zoomstart movestart", () => {
+    lastUserMapActivity = Date.now();
 });
-const stations=[ {
-    name:"Station 1",area:"Little Rock",zone:["metro"],countyCodes:["ARC119"],lat:34.7433819,lng:-92.2843613
-}
-, {
-    name:"Station 3",area:"Little Rock",zone:["metro"],countyCodes:["ARC119"],lat:34.6690390,lng:-92.3581024
-}
-, {
-    name:"Station 4",area:"Little Rock / NLR",zone:["metro"],countyCodes:["ARC119"],lat:34.7593041,lng:-92.3802302
-}
-, {
-    name:"Station 10",area:"Little Rock",zone:["metro"],countyCodes:["ARC119"],lat:34.7991817,lng:-92.4554265
-}
-, {
-    name:"MEMS North",area:"Little Rock / NLR",zone:["metro"],countyCodes:["ARC119"],lat:34.7812027,lng:-92.2743301
-}
-, {
-    name:"Maumelle Station",area:"Maumelle",zone:["maumelle"],countyCodes:["ARC119"],lat:34.8569051,lng:-92.4070432
-}
-, {
-    name:"North Pulaski Station",area:"North Pulaski / Sherwood",zone:["north-pulaski"],countyCodes:["ARC119"],lat:34.9403325,lng:-92.1683398
-}
-, {
-    name:"Gravel Ridge Station",area:"NLR / Sherwood",zone:["north-pulaski"],countyCodes:["ARC119"],lat:34.8686392,lng:-92.1978871
-}
-, {
-    name:"Arch St Station",area:"South Pulaski / Grant County",zone:["arch-street"],countyCodes:["ARC119"],lat:34.6174833,lng:-92.3157304
-}
-, {
-    name:"Cabot Station",area:"Cabot / Lonoke County",zone:["lonoke"],countyCodes:["ARC085"],lat:34.9732158,lng:-92.0171126
-}
-, {
-    name:"Sheridan Station",area:"Sheridan / Grant County",zone:["grant"],countyCodes:["ARC053"],lat:34.3170329,lng:-92.3955182
-}
-, {
-    name:"Sheridan Fire Station",area:"Sheridan / Grant County",zone:["grant"],countyCodes:["ARC053"],lat:34.3073,lng:-92.3963
+
+/* =========================
+   AREA BUTTONS FROM DATABASE
+========================= */
+
+function buildAreaButtons() {
+    const bar = document.getElementById("areaButtons");
+    if (!bar) return;
+
+    bar.innerHTML = "";
+
+    areaButtons.forEach(area => {
+        if (!area || !area.id) return;
+
+        const zone = document.createElement("div");
+        zone.className = "zone normal";
+        zone.dataset.zone = area.id;
+
+        const button = document.createElement("button");
+        button.className = "zone-btn";
+        button.type = "button";
+        button.textContent = area.label || area.title || area.id;
+        button.addEventListener("click", () => openZoneDetail(area.id));
+
+        zone.appendChild(button);
+        bar.appendChild(zone);
+    });
 }
 
-];
-const locations=[ {
-    name:"Greystone",area:"Cabot",type:"Neighborhood",lat:35.02923764117509,lng:-92.05865556970093,radius:"2 miles"
-}
-,{
-    name:"Clinton Nat. Airport",area:"Little Rock",type:"Airport",lat:34.7284011058131,lng:-92.22039216234353,radius:"1 mile"
-}
-,{
-    name:"Wrightsville Correctional Unit",area:"Wrightsville",type:"Correctional",lat:34.60194061960711,lng:-92.19260013773142,radius:".25 miles"
-}
-,{
-    name:"LR Air Force Base",area:"Jacksonville",type:"Military",lat:34.90639838445616,lng:-92.14395233018587,radius:"1 mile"
-}
-,{
-    name:"LR Veterans Hospital",area:"Little Rock",type:"Hospital",lat:34.746267149080055,lng:-92.32047667930003,radius:"1 mile"
-}
-,{
-    name:"UAMS",area:"Little Rock",type:"Hospital",lat:34.74744666257331,lng:-92.32088969840527,radius:".25 miles"
-}
-,{
-    name:"St. Vincent Infirmary",area:"Little Rock",type:"Hospital",lat:34.75033284961561,lng:-92.33940377918991,radius:"1 mile"
-}
-,{
-    name:"Baptist Med Center LR",area:"Little Rock",type:"Hospital",lat:34.74480435362505,lng:-92.38089211015347,radius:".25 miles"
-}
-,{
-    name:"Arkansas Heart Hospital",area:"Little Rock",type:"Hospital",lat:34.73922859302091,lng:-92.39358428834757,radius:"1 mile"
-}
-,{
-    name:"Arkansas Childrens",area:"Little Rock",type:"Hospital",lat:34.74198874170889,lng:-92.29300715213085,radius:"1 mile"
-}
-,{
-    name:"Saline Memorial",area:"Benton",type:"Hospital",lat:34.57494971990144,lng:-92.59375497712537,radius:"1 mile"
-}
-,{
-    name:"Baptist Springhill",area:"North Little Rock",type:"Hospital",lat:34.78394874277726,lng:-92.22312924338553,radius:"1 mile"
-}
-,{
-    name:"SVI North",area:"Sherwood",type:"Hospital",lat:34.81344283040206,lng:-92.20907267741393,radius:"1 mile"
-}
-,{
-    name:"Unity Jacksonville",area:"Jacksonville",type:"Hospital",lat:34.87316535170868,lng:-92.12534698787888,radius:"1 mile"
-}
-,{
-    name:"Cabot Emergency Hospital",area:"Cabot",type:"Hospital",lat:34.98186175242931,lng:-92.03483579161522,radius:"1 mile"
-}
-,{
-    name:"Pinnacle MTN",area:"Little Rock",type:"Landmark",lat:34.84164634982719,lng:-92.48591891234585,radius:".5 miles"
-}
-
-];
-const towns=[{
-    name:"Little Rock",zone:["metro"],countyCodes:["ARC119"],lat:34.7465,lng:-92.2896
-}
-,{
-    name:"North Little Rock",zone:["metro"],countyCodes:["ARC119"],lat:34.7695,lng:-92.2671
-}
-,{
-    name:"Maumelle",zone:["maumelle"],countyCodes:["ARC119"],lat:34.8668,lng:-92.4043
-}
-,{
-    name:"Sherwood",zone:["north-pulaski"],countyCodes:["ARC119"],lat:34.8151,lng:-92.2243
-}
-,{
-    name:"Cabot",zone:["lonoke"],countyCodes:["ARC085"],lat:34.9745,lng:-92.0165
-}
-,{
-    name:"Lonoke",zone:["lonoke"],countyCodes:["ARC085"],lat:34.7839,lng:-91.8999
-}
-,{
-    name:"Sheridan",zone:["grant"],countyCodes:["ARC053"],lat:34.3070,lng:-92.4013
-}
-
-];
-const zoneProfiles={
-    metro:{
-        title:"METRO",center:[34.74,-92.30],stations:["Station 1","Station 3","Station 4","Station 10","MEMS North"]
-    }
-    ,maumelle:{
-        title:"MAUMELLE",center:[34.86,-92.40],stations:["Maumelle Station"]
-    }
-    ,"north-pulaski":{
-        title:"NORTH PULASKI",center:[34.90,-92.17],stations:["North Pulaski Station","Gravel Ridge Station"]
-    }
-    ,"arch-street":{
-        title:"ARCH STREET",center:[34.62,-92.31],stations:["Arch St Station"]
-    }
-    ,lonoke:{
-        title:"LONOKE COUNTY",center:[34.97,-92.01],stations:["Cabot Station"]
-    }
-    ,grant:{
-        title:"GRANT COUNTY",center:[34.31,-92.39],stations:["Sheridan Station","Sheridan Fire Station"]
-    }
-
-};
+buildAreaButtons();
 
 const stationLayer=L.layerGroup().addTo(map), poiLayer=L.layerGroup().addTo(map), stormTrackLayer=L.layerGroup().addTo(map);
 const radarLayer=L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi",{
