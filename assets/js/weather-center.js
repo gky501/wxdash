@@ -392,9 +392,15 @@ async function loadOutlookData(){
   const base = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer";
 
   const endpoints = {
-    tornado: `${base}/4/query?where=1%3D1&outFields=*&f=geojson`,
-    hail: `${base}/6/query?where=1%3D1&outFields=*&f=geojson`,
-    wind: `${base}/5/query?where=1%3D1&outFields=*&f=geojson`,
+    tornadoCig: `${base}/2/query?where=1%3D1&outFields=*&f=geojson`,
+    tornadoProb: `${base}/3/query?where=1%3D1&outFields=*&f=geojson`,
+
+    hailCig: `${base}/4/query?where=1%3D1&outFields=*&f=geojson`,
+    hailProb: `${base}/5/query?where=1%3D1&outFields=*&f=geojson`,
+
+    windCig: `${base}/6/query?where=1%3D1&outFields=*&f=geojson`,
+    windProb: `${base}/7/query?where=1%3D1&outFields=*&f=geojson`,
+
     excessiveRain: "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
   };
 
@@ -415,14 +421,32 @@ async function loadOutlookData(){
   }
 }
 
-function getOutlookLabel(point, geojson, type){
+function getStormOutlook(point){
+  return {
+    tornado: {
+      prob: getProbLabel(point, outlookData.tornadoProb, "tornado"),
+      cig: getCigLabel(point, outlookData.tornadoCig, "tornado")
+    },
+    hail: {
+      prob: getProbLabel(point, outlookData.hailProb, "hail"),
+      cig: getCigLabel(point, outlookData.hailCig, "hail")
+    },
+    wind: {
+      prob: getProbLabel(point, outlookData.windProb, "wind"),
+      cig: getCigLabel(point, outlookData.windCig, "wind")
+    },
+    excessiveRain: getRainLabel(point, outlookData.excessiveRain)
+  };
+}
+
+function getProbLabel(point, geojson, type){
   if(!geojson || !geojson.features){
     return "Not loaded";
   }
 
   let best = {
     rank: 0,
-    label: "No higher-end signal"
+    label: "Not highlighted"
   };
 
   geojson.features.forEach(feature => {
@@ -430,7 +454,7 @@ function getOutlookLabel(point, geojson, type){
 
     try{
       if(turf.booleanPointInPolygon(point, feature)){
-        const parsed = readOutlookProperties(feature.properties || {}, type);
+        const parsed = readProbabilityProperties(feature.properties || {}, type);
 
         if(parsed.rank >= best.rank){
           best = parsed;
@@ -442,8 +466,127 @@ function getOutlookLabel(point, geojson, type){
   return best.label;
 }
 
-function readOutlookProperties(props, type){
-  const raw =
+function getCigLabel(point, geojson, type){
+  if(!geojson || !geojson.features){
+    return "Not loaded";
+  }
+
+  let best = {
+    rank: 0,
+    label: "No added strength note"
+  };
+
+  geojson.features.forEach(feature => {
+    if(!feature.geometry) return;
+
+    try{
+      if(turf.booleanPointInPolygon(point, feature)){
+        const parsed = readCigProperties(feature.properties || {}, type);
+
+        if(parsed.rank >= best.rank){
+          best = parsed;
+        }
+      }
+    }catch(err){}
+  });
+
+  return best.label;
+}
+
+function getRainLabel(point, geojson){
+  if(!geojson || !geojson.features){
+    return "Not loaded";
+  }
+
+  let best = {
+    rank: 0,
+    label: "Not highlighted"
+  };
+
+  geojson.features.forEach(feature => {
+    if(!feature.geometry) return;
+
+    try{
+      if(turf.booleanPointInPolygon(point, feature)){
+        const raw = readRawOutlookValue(feature.properties || {});
+        const upper = raw.toUpperCase();
+
+        const parsed =
+          upper.includes("HIGH") ? { rank: 4, label: "High flooding concern" } :
+          upper.includes("MODERATE") ? { rank: 3, label: "Moderate flooding concern" } :
+          upper.includes("SLIGHT") ? { rank: 2, label: "Elevated flooding concern" } :
+          upper.includes("MARGINAL") ? { rank: 1, label: "Limited flooding concern" } :
+          { rank: 1, label: raw || "Included in rain outlook" };
+
+        if(parsed.rank >= best.rank){
+          best = parsed;
+        }
+      }
+    }catch(err){}
+  });
+
+  return best.label;
+}
+
+function readProbabilityProperties(props, type){
+  const raw = readRawOutlookValue(props);
+  const upper = raw.toUpperCase();
+
+  const numberMatch = upper.match(/(\d+)\s*%?/);
+  const number = numberMatch ? Number(numberMatch[1]) : null;
+
+  if(number !== null){
+    return {
+      rank: number,
+      label: `${number}% area`
+    };
+  }
+
+  if(upper.includes("HIGH")) return { rank: 60, label: "High risk area" };
+  if(upper.includes("MODERATE") || upper.includes("MDT")) return { rank: 45, label: "Moderate risk area" };
+  if(upper.includes("ENHANCED") || upper.includes("ENH")) return { rank: 30, label: "Enhanced risk area" };
+  if(upper.includes("SLIGHT") || upper.includes("SLGT")) return { rank: 15, label: "Slight risk area" };
+  if(upper.includes("MARGINAL") || upper.includes("MRGL")) return { rank: 5, label: "Marginal risk area" };
+
+  return {
+    rank: 0,
+    label: raw || "Not highlighted"
+  };
+}
+
+function readCigProperties(props, type){
+  const raw = readRawOutlookValue(props);
+  const upper = raw.toUpperCase();
+  const cig = extractCigLevel(upper);
+
+  if(type === "tornado"){
+    if(cig === 3) return { rank: 3, label: "Highest tornado strength note" };
+    if(cig === 2) return { rank: 2, label: "Stronger tornadoes possible" };
+    if(cig === 1) return { rank: 1, label: "A stronger tornado is possible" };
+    return { rank: 0, label: "No added strength note" };
+  }
+
+  if(type === "hail"){
+    if(cig === 2) return { rank: 2, label: "Very large hail possible" };
+    if(cig === 1) return { rank: 1, label: "Large hail possible" };
+    return { rank: 0, label: "No added hail-size note" };
+  }
+
+  if(type === "wind"){
+    if(cig === 3) return { rank: 3, label: "Highest damaging wind note" };
+    if(cig === 2) return { rank: 2, label: "Organized damaging wind possible" };
+    if(cig === 1) return { rank: 1, label: "Damaging wind possible" };
+    return { rank: 0, label: "No added wind-strength note" };
+  }
+
+  return {
+    rank: 0,
+    label: "No added strength note"
+  };
+}
+
+function readRawOutlookValue(props){
+  return String(
     props.LABEL ||
     props.label ||
     props.RISK ||
@@ -458,47 +601,8 @@ function readOutlookProperties(props, type){
     props.outlook ||
     props.name ||
     props.Name ||
-    "";
-
-  const text = String(raw).trim();
-  const upper = text.toUpperCase();
-  const cig = extractCigLevel(upper);
-
-  if(type === "tornado"){
-    if(cig === 3) return "Level 3: Highest tornado intensity signal";
-    if(cig === 2) return "Level 2: Strong tornado potential is higher";
-    if(cig === 1) return "Level 1: A stronger tornado is possible";
-    if(upper.includes("SIG")) return "Level 1: A stronger tornado is possible";
-    return "No added intensity signal";
-  }
-
-  if(type === "hail"){
-    if(cig === 2) return "Level 2: Very large, damaging hail is possible";
-    if(cig === 1) return "Level 1: Large hail is possible";
-    if(upper.includes("SIG")) return "Level 1: Large hail is possible";
-    return "No added intensity signal";
-  }
-
-  if(type === "wind"){
-    if(cig === 3) return "Level 3: Highest wind damage signal";
-    if(cig === 2) return "Level 2: More organized damaging wind is possible";
-    if(cig === 1) return "Level 1: Damaging wind is possible";
-    if(upper.includes("SIG")) return "Level 1: Damaging wind is possible";
-    return "No added intensity signal";
-  }
-
-  if(type === "excessiveRain"){
-    const lower = upper.toLowerCase();
-
-    if(lower.includes("high")) return "High flooding concern";
-    if(lower.includes("moderate")) return "Moderate flooding concern";
-    if(lower.includes("slight")) return "Elevated flooding concern";
-    if(lower.includes("marginal")) return "Limited flooding concern";
-
-    return "No added flooding signal";
-  }
-
-  return "No added intensity signal";
+    ""
+  ).trim();
 }
 
 function extractCigLevel(text){
@@ -514,7 +618,6 @@ function extractCigLevel(text){
 
   return 0;
 }
-
 /* =========================
    ALERTS
 ========================= */
@@ -913,10 +1016,7 @@ function openZoneDetail(zoneId){
     `).join("")
     : `<li>No current watches or warnings for this station group.</li>`;
 
-  const tornadoOutlook = getOutlookLabel(zonePoint, outlookData.tornado, "tornado");
-  const hailOutlook = getOutlookLabel(zonePoint, outlookData.hail, "hail");
-  const windOutlook = getOutlookLabel(zonePoint, outlookData.wind, "wind");
-  const rainOutlook = getOutlookLabel(zonePoint, outlookData.excessiveRain, "excessiveRain");
+const outlook = getStormOutlook(zonePoint);
 
   setText("detailTitle", profile.title || zoneId);
 
@@ -931,18 +1031,37 @@ function openZoneDetail(zoneId){
       <div id="stationRadarMap" style="height:280px;margin-top:10px;border-radius:10px;overflow:hidden;"></div>
     </div>
 
-    <div class="detail-section">
-      <strong>Outlook Data</strong>
-      <div style="font-size:12px;opacity:.75;margin-top:4px;margin-bottom:8px;">
-        Plain-language severe weather potential for this station area.
-      </div>
-      <ul class="detail-list">
-        <li>Tornado — <strong>${tornadoOutlook}</strong></li>
-        <li>Hail — <strong>${hailOutlook}</strong></li>
-        <li>Wind — <strong>${windOutlook}</strong></li>
-        <li>Excessive Rain — <strong>${rainOutlook}</strong></li>
-      </ul>
-    </div>
+   <div class="detail-section">
+  <strong>Storm Outlook</strong>
+  <div style="font-size:12px;opacity:.75;margin-top:4px;margin-bottom:8px;">
+    Outlook shows the SPC forecast area. Strength note explains how strong storms could be if they develop.
+  </div>
+
+  <ul class="detail-list">
+    <li>
+      <strong>Tornado</strong><br>
+      Outlook: ${outlook.tornado.prob}<br>
+      Strength note: ${outlook.tornado.cig}
+    </li>
+
+    <li>
+      <strong>Hail</strong><br>
+      Outlook: ${outlook.hail.prob}<br>
+      Strength note: ${outlook.hail.cig}
+    </li>
+
+    <li>
+      <strong>Wind</strong><br>
+      Outlook: ${outlook.wind.prob}<br>
+      Strength note: ${outlook.wind.cig}
+    </li>
+
+    <li>
+      <strong>Excessive Rain</strong><br>
+      Outlook: ${outlook.excessiveRain}
+    </li>
+  </ul>
+</div>
 
     <div class="detail-section">
       <strong>Stations</strong>
@@ -1730,7 +1849,14 @@ loadServiceArea();
 loadLzkArea();
 loadAlerts();
 loadTempestConditions();
-loadOutlookData();
+let outlookData = {
+  tornadoCig: null,
+  tornadoProb: null,
+  hailCig: null,
+  hailProb: null,
+  windCig: null,
+  windProb: null,
+  excessiveRain: null
 loadCustomStormTracks();
 
 setInterval(loadOutlookData, 10 * 60 * 1000);
