@@ -458,22 +458,22 @@ function readOutlookProperties(props, type){
 
   if(type === "tornado"){
     if(upper.includes("CIG 3") || upper.includes("CIG3") || upper === "3") {
-      return "EXTREME (Violent EF4+ possible)";
+      return "EXTREME";
     }
     if(upper.includes("CIG 2") || upper.includes("CIG2") || upper === "2") {
-      return "HIGH (EF3+ possible)";
+      return "HIGH";
     }
     if(upper.includes("CIG 1") || upper.includes("CIG1") || upper === "1") {
-      return "ELEVATED (EF0–EF2 possible)";
+      return "ELEVATED";
     }
     if(upper.includes("SIG")) {
-      return "ELEVATED (Significant tornado possible)";
+      return "MODERATE";
     }
-    if(upper.includes("HIGH")) return "EXTREME";
-    if(upper.includes("MODERATE")) return "HIGH";
-    if(upper.includes("ENHANCED")) return "ELEVATED";
-    if(upper.includes("SLIGHT")) return "ELEVATED";
-    if(upper.includes("MARGINAL")) return "LIMITED";
+    if(upper.includes("HIGH")) return "HIGH";
+    if(upper.includes("MODERATE")) return "MODERATE";
+    if(upper.includes("ENHANCED")) return "ENHANCED";
+    if(upper.includes("SLIGHT")) return "SLIGHT";
+    if(upper.includes("MARGINAL")) return "MARGINAL";
     return upper || "LOW";
   }
 
@@ -487,42 +487,42 @@ function readOutlookProperties(props, type){
     if(upper.includes("SIG")) {
       return "SIGNIFICANT (2 inch+ hail possible)";
     }
-    if(upper.includes("HIGH")) return "DESTRUCTIVE";
-    if(upper.includes("MODERATE")) return "DESTRUCTIVE";
-    if(upper.includes("ENHANCED")) return "SIGNIFICANT";
-    if(upper.includes("SLIGHT")) return "ELEVATED";
-    if(upper.includes("MARGINAL")) return "LIMITED";
+    if(upper.includes("HIGH")) return "HIGH";
+    if(upper.includes("MODERATE")) return "MODERATE";
+    if(upper.includes("ENHANCED")) return "ENHANCED";
+    if(upper.includes("SLIGHT")) return "SLIGHT";
+    if(upper.includes("MARGINAL")) return "MARGINAL";
     return upper || "LOW";
   }
 
   if(type === "wind"){
     if(upper.includes("CIG 3") || upper.includes("CIG3") || upper === "3") {
-      return "EXTREME (Derecho / widespread damage possible)";
+      return "EXTREME";
     }
     if(upper.includes("CIG 2") || upper.includes("CIG2") || upper === "2") {
-      return "SEVERE (Organized damaging wind possible)";
+      return "SEVERE";
     }
     if(upper.includes("CIG 1") || upper.includes("CIG1") || upper === "1") {
-      return "DAMAGING (75+ mph possible)";
+      return "DAMAGING";
     }
     if(upper.includes("SIG")) {
-      return "DAMAGING (75+ mph possible)";
+      return "DAMAGING";
     }
-    if(upper.includes("HIGH")) return "EXTREME";
-    if(upper.includes("MODERATE")) return "SEVERE";
-    if(upper.includes("ENHANCED")) return "DAMAGING";
-    if(upper.includes("SLIGHT")) return "ELEVATED";
-    if(upper.includes("MARGINAL")) return "LIMITED";
+    if(upper.includes("HIGH")) return "HIGH";
+    if(upper.includes("MODERATE")) return "MODERATE";
+    if(upper.includes("ENHANCED")) return "ENHANCED";
+    if(upper.includes("SLIGHT")) return "SLIGHT";
+    if(upper.includes("MARGINAL")) return "MARGINAL";
     return upper || "LOW";
   }
 
   if(type === "excessiveRain"){
     const lower = upper.toLowerCase();
 
-    if(lower.includes("high")) return "EXTREME";
-    if(lower.includes("moderate")) return "HIGH";
-    if(lower.includes("slight")) return "ELEVATED";
-    if(lower.includes("marginal")) return "LIMITED";
+    if(lower.includes("high")) return "HIGH";
+    if(lower.includes("moderate")) return "MODERATE";
+    if(lower.includes("slight")) return "SLIGHT";
+    if(lower.includes("marginal")) return "MARGINAL";
 
     return upper || "LOW";
   }
