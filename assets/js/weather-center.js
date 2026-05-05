@@ -1880,51 +1880,39 @@ window.addEventListener("load", () => {
 });
 
 /* =========================================================
-   OUTLOOK FIX OVERRIDE
-   Paste this at the VERY BOTTOM of weather-center.js
-   This fixes:
-   - 0% area showing a tornado/hail/wind note
-   - CIG wording being confusing
-   - CIG notes showing when the station is not actually inside the outlook
+   STORM OUTLOOK FIX
+   Paste at VERY BOTTOM of weather-center.js
+
+   Fixes:
+   - "0% area" showing on the dashboard
+   - CIG/hatched areas being ignored
+   - confusing "no higher-end signal" wording
 ========================================================= */
 
 function getStormOutlook(point){
-  const tornadoProb = getProbInfo(point, outlookData.tornadoProb, "tornado");
-  const hailProb = getProbInfo(point, outlookData.hailProb, "hail");
-  const windProb = getProbInfo(point, outlookData.windProb, "wind");
-
   return {
     tornado: {
-      prob: tornadoProb.label,
-      note: tornadoProb.rank > 0
-        ? getCigLabel(point, outlookData.tornadoCig, "tornado")
-        : "Not in a tornado outlook area"
+      prob: getProbLabel(point, outlookData.tornadoProb, "tornado"),
+      note: getCigLabel(point, outlookData.tornadoCig, "tornado")
     },
 
     hail: {
-      prob: hailProb.label,
-      note: hailProb.rank > 0
-        ? getCigLabel(point, outlookData.hailCig, "hail")
-        : "Not in a hail outlook area"
+      prob: getProbLabel(point, outlookData.hailProb, "hail"),
+      note: getCigLabel(point, outlookData.hailCig, "hail")
     },
 
     wind: {
-      prob: windProb.label,
-      note: windProb.rank > 0
-        ? getCigLabel(point, outlookData.windCig, "wind")
-        : "Not in a damaging wind outlook area"
+      prob: getProbLabel(point, outlookData.windProb, "wind"),
+      note: getCigLabel(point, outlookData.windCig, "wind")
     },
 
     excessiveRain: getRainLabel(point, outlookData.excessiveRain)
   };
 }
 
-function getProbInfo(point, geojson, type){
+function getProbLabel(point, geojson, type){
   if(!geojson || !geojson.features){
-    return {
-      rank: 0,
-      label: "Not loaded"
-    };
+    return "Not loaded";
   }
 
   let best = {
@@ -1939,18 +1927,14 @@ function getProbInfo(point, geojson, type){
       if(turf.booleanPointInPolygon(point, feature)){
         const parsed = readProbabilityProperties(feature.properties || {}, type);
 
-        if(parsed.rank >= best.rank){
+        if(parsed.rank > best.rank){
           best = parsed;
         }
       }
     }catch(err){}
   });
 
-  return best;
-}
-
-function getProbLabel(point, geojson, type){
-  return getProbInfo(point, geojson, type).label;
+  return best.label;
 }
 
 function getCigLabel(point, geojson, type){
@@ -1960,7 +1944,7 @@ function getCigLabel(point, geojson, type){
 
   let best = {
     rank: 0,
-    label: "No added note"
+    label: getNoCigLabel(type)
   };
 
   geojson.features.forEach(feature => {
@@ -1970,7 +1954,7 @@ function getCigLabel(point, geojson, type){
       if(turf.booleanPointInPolygon(point, feature)){
         const parsed = readCigProperties(feature.properties || {}, type);
 
-        if(parsed.rank >= best.rank){
+        if(parsed.rank > best.rank){
           best = parsed;
         }
       }
@@ -1987,7 +1971,19 @@ function readProbabilityProperties(props, type){
   const numberMatch = upper.match(/(\d+)\s*%?/);
   const number = numberMatch ? Number(numberMatch[1]) : null;
 
+  /*
+    Important:
+    SPC/NOAA sometimes returns a 0 value in the polygon set.
+    That should NOT display as "0% area" to the user.
+  */
   if(number !== null){
+    if(number <= 0){
+      return {
+        rank: 0,
+        label: "Not highlighted"
+      };
+    }
+
     return {
       rank: number,
       label: `${number}% area`
@@ -2031,7 +2027,7 @@ function readProbabilityProperties(props, type){
 
   return {
     rank: 0,
-    label: raw || "Not highlighted"
+    label: "Not highlighted"
   };
 }
 
@@ -2044,21 +2040,21 @@ function readCigProperties(props, type){
     if(cig === 3){
       return {
         rank: 3,
-        label: "Strongest tornado potential shown for this outlook"
+        label: "Strongest tornado note: if a tornado occurs, it could be high-end"
       };
     }
 
     if(cig === 2){
       return {
         rank: 2,
-        label: "Stronger tornadoes are possible if storms develop"
+        label: "Stronger tornadoes possible if a tornado occurs"
       };
     }
 
     if(cig === 1){
       return {
         rank: 1,
-        label: "A stronger tornado is possible if storms develop"
+        label: "A stronger tornado is possible if a tornado occurs"
       };
     }
 
@@ -2072,14 +2068,14 @@ function readCigProperties(props, type){
     if(cig === 2){
       return {
         rank: 2,
-        label: "Very large hail is possible if storms develop"
+        label: "Very large hail possible if storms develop"
       };
     }
 
     if(cig === 1){
       return {
         rank: 1,
-        label: "Large hail is possible if storms develop"
+        label: "Large hail possible if storms develop"
       };
     }
 
@@ -2093,21 +2089,21 @@ function readCigProperties(props, type){
     if(cig === 3){
       return {
         rank: 3,
-        label: "Highest damaging wind potential shown for this outlook"
+        label: "Highest damaging wind note"
       };
     }
 
     if(cig === 2){
       return {
         rank: 2,
-        label: "Organized damaging winds are possible if storms develop"
+        label: "Organized damaging winds possible if storms develop"
       };
     }
 
     if(cig === 1){
       return {
         rank: 1,
-        label: "Damaging winds are possible if storms develop"
+        label: "Damaging winds possible if storms develop"
       };
     }
 
@@ -2121,6 +2117,13 @@ function readCigProperties(props, type){
     rank: 0,
     label: "No added note"
   };
+}
+
+function getNoCigLabel(type){
+  if(type === "tornado") return "No added tornado note";
+  if(type === "hail") return "No added hail note";
+  if(type === "wind") return "No added wind note";
+  return "No added note";
 }
 
 function readRawOutlookValue(props){
@@ -2205,7 +2208,7 @@ function getRainLabel(point, geojson){
           upper.includes("MARGINAL") ? { rank: 1, label: "Limited flooding concern" } :
           { rank: 1, label: raw || "Included in rain outlook" };
 
-        if(parsed.rank >= best.rank){
+        if(parsed.rank > best.rank){
           best = parsed;
         }
       }
