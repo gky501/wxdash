@@ -12,7 +12,7 @@
 ========================================================= */
 
 const TEMPEST_STATION_ID = "136293";
-const TEMPEST_TOKEN = "a394fe76-fe00-4227-836b-f574a15ce385";
+const TEMPEST_TOKEN = "PASTE_YOUR_TEMPEST_TOKEN_HERE";
 
 const REFRESH_SECONDS = 60;
 const USER_ACTIVITY_HOLD_MS = 5 * 60 * 1000;
@@ -27,10 +27,10 @@ let impactedStationNames = new Set();
 let TRACK_WINDOW_MINUTES = 60;
 
 let outlookData = {
-    tornado: null,
-    hail: null,
-    wind: null,
-    excessiveRain: null
+  tornado: null,
+  hail: null,
+  wind: null,
+  excessiveRain: null
 };
 
 /* =========================
@@ -40,19 +40,23 @@ let outlookData = {
 const WEATHER_DATABASE = window.MEMS_WEATHER_DB || window.MEMS_WEATHER_DATABASE;
 
 if (!WEATHER_DATABASE) {
-    throw new Error("Weather database missing. Load assets/data/weather-database.js before assets/js/weather-center.js");
+  throw new Error("Weather database missing. Load assets/data/weather-database.js before assets/js/weather-center.js");
 }
 
 const areaButtons = Array.isArray(WEATHER_DATABASE.areaButtons) ? WEATHER_DATABASE.areaButtons : [];
 const stations = Array.isArray(WEATHER_DATABASE.stations) ? WEATHER_DATABASE.stations : [];
 const locations = Array.isArray(WEATHER_DATABASE.locations) ? WEATHER_DATABASE.locations : [];
 const towns = Array.isArray(WEATHER_DATABASE.towns) ? WEATHER_DATABASE.towns : [];
+
 const zoneProfiles = WEATHER_DATABASE.zoneProfiles || Object.fromEntries(
-    areaButtons.map(area => [area.id, {
-        title: area.title || area.label || area.id,
-        center: area.center,
-        stations: area.stations || []
-    }])
+  areaButtons.map(area => [
+    area.id,
+    {
+      title: area.title || area.label || area.id,
+      center: area.center,
+      stations: area.stations || []
+    }
+  ])
 );
 
 /* =========================
@@ -64,17 +68,22 @@ const AR_CENTER = [34.75, -92.25];
 const AR_ZOOM = 7;
 
 const map = L.map("map", {
-    worldCopyJump: false
+  worldCopyJump: false
 }).setView(AR_CENTER, AR_ZOOM);
 
 L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 20,
-    attribution: "© OpenStreetMap © CARTO"
+  maxZoom: 20,
+  attribution: "© OpenStreetMap © CARTO"
 }).addTo(map);
 
 map.on("mousemove dragstart zoomstart movestart", () => {
-    lastUserMapActivity = Date.now();
+  lastUserMapActivity = Date.now();
 });
+
+/* =========================
+   BACKGROUND BOUNDARIES
+========================= */
+
 const serviceAreaLayer = L.geoJSON(null, {
   style: {
     color: "#000000",
@@ -82,184 +91,26 @@ const serviceAreaLayer = L.geoJSON(null, {
     opacity: 0.40,
     fillColor: "#005bea",
     fillOpacity: 0.0
-  },
+  }
 }).addTo(map);
 
-async function loadServiceArea() {
-  try {
-    const res = await fetch("assets/data/service-map.geojson", {
-      cache: "no-store"
-    });
-
-    if (!res.ok) {
-      throw new Error("Service area GeoJSON failed: " + res.status);
-    }
-
-    const data = await res.json();
-
-    console.log("Service area loaded:", data);
-
-    serviceAreaLayer.clearLayers();
-    serviceAreaLayer.addData(data);
-
-  } catch (err) {
-    console.error("Unable to load service area boundary:", err);
-  }
-}
-
-loadServiceArea();
-const lkzAreaLayer = L.geoJSON(null, {
+const lzkAreaLayer = L.geoJSON(null, {
   style: {
     color: "#005bea",
     weight: 2,
     opacity: 0.40,
     fillColor: "#005bea",
     fillOpacity: 0.0
-  },
-}).addTo(map);
-
-async function loadlzkArea() {
-  try {
-    const res = await fetch("assets/data/lzk_wfo.geojson", {
-      cache: "no-store"
-    });
-
-    if (!res.ok) {
-      throw new Error("Service area GeoJSON failed: " + res.status);
-    }
-
-    const data = await res.json();
-
-    console.log("Service area loaded:", data);
-
-   lkzAreaLayer.clearLayers();
-    lkzAreaLayer.addData(data);
-
-  } catch (err) {
-    console.error("Unable to load LZK area boundary:", err);
   }
-}
-
-loadlzkArea();
-/* =========================
-   AREA BUTTONS FROM DATABASE
-========================= */
-
-function buildAreaButtons() {
-    const bar = document.getElementById("areaButtons");
-    if (!bar) return;
-
-    bar.innerHTML = "";
-
-    areaButtons.forEach(area => {
-        if (!area || !area.id) return;
-
-        const zone = document.createElement("div");
-        zone.className = "zone normal";
-        zone.dataset.zone = area.id;
-
-        const button = document.createElement("button");
-        button.className = "zone-btn";
-        button.type = "button";
-        button.textContent = area.label || area.title || area.id;
-        button.addEventListener("click", () => openZoneDetail(area.id));
-
-        zone.appendChild(button);
-        bar.appendChild(zone);
-    });
-}
-
-buildAreaButtons();
-
-const stationLayer=L.layerGroup().addTo(map), poiLayer=L.layerGroup().addTo(map), stormTrackLayer=L.layerGroup().addTo(map);
-const radarLayer=L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi",{
-    layers:"nexrad-n0q-900913",format:"image/png",transparent:true,opacity:.58,attribution:"Radar: Iowa State Mesonet / NEXRAD"
 }).addTo(map);
-const warningLayer=L.geoJSON(null,{
-    style:f=>{
-        const s=getSeverity(f.properties);
-        return{
-            color:s==="tornado-emergency"?"#ff00ff":s==="tornado-warning"?"#7e22ce":"#f97316",weight:s==="tornado-emergency"?5:4,fillColor:s==="tornado-emergency"?"#dc2626":s==="tornado-warning"?"#7e22ce":"#f97316",fillOpacity:s==="tornado-emergency"?.42:.34
-        }
 
-    }
-    ,onEachFeature:(f,l)=>l.on("click",()=>openDetail(buildAlertDetail(f)))
-}).addTo(map);
-stations.forEach(station=>{
-    L.marker([station.lat,station.lng],{
-        icon:L.divIcon({
-            className:"",html:`<div class="station-marker" id="marker-${slug(station.name)}"></div>`,iconSize:[18,18],iconAnchor:[9,9]
-        })
-    }).bindPopup(`<strong>${station.name}</strong><br>${station.area}`).addTo(stationLayer)
-});
-locations.forEach(location=>{
-    L.marker([location.lat,location.lng],{
-        icon:L.divIcon({
-            className:"",html:`<div class="poi-marker" id="location-marker-${slug(location.name)}"></div>`,iconSize:[15,15],iconAnchor:[7,7]
-        })
-    }).bindPopup(`<strong>${location.name}</strong><br>Type: ${location.type}<br>Watch radius: ${location.radius||"N/A"}`).addTo(poiLayer)
-});
-L.control.layers(null,{
-    "Radar Reflectivity":radarLayer,"Storm Tracks":stormTrackLayer,"Stations":stationLayer,"Locations":poiLayer,"Warning Polygons":warningLayer
-}
-,{
-    collapsed:false,position:"topleft"
-}).addTo(map);
-function setLayerVisible(name,on){
-    const layers={
-        radar:radarLayer,serviceArea:serviceAreaLayer,NWSwfo:  lkzAreaLayer, tracks:stormTrackLayer,stations:stationLayer,poi:poiLayer,warnings:warningLayer
-    };
-
-    const l=layers[name];
-    if(!l)return;
-    if(on&&!map.hasLayer(l))l.addTo(map);
-    if(!on&&map.hasLayer(l))map.removeLayer(l)
-}
-
-function updateLocationMarkerProminence(){
-    document.querySelectorAll(".poi-marker").forEach(el=>el.classList.toggle("zoomed",map.getZoom()>=10))
-}
-
-map.on("zoomend",updateLocationMarkerProminence);
-updateLocationMarkerProminence();
-async function loadTempestConditions(){
-    if(!TEMPEST_STATION_ID||TEMPEST_TOKEN==="PASTE_YOUR_TOKEN_HERE"){
-        setTempestUnavailable("Token not configured");
-        return
-    }
-
-    try{
-        const res=await fetch(`https://swd.weatherflow.com/swd/rest/observations/station/${TEMPEST_STATION_ID}?token=${TEMPEST_TOKEN}`);
-        if(!res.ok)throw new Error("Tempest API failed: "+res.status);
-        const data=await res.json(),obs=data.obs&&data.obs[0];
-        if(!obs)throw new Error("No Tempest observation returned");
-        const airTempF=cToF(obs.air_temperature),humidity=safeRound(obs.relative_humidity),windMph=msToMph(obs.wind_avg),gustMph=msToMph(obs.wind_gust),windDir=degToCompass(obs.wind_direction),rainDay=mmToIn(obs.precip_accum_local_day),rainRate=mmToIn(obs.precip),lightningKm=obs.lightning_strike_last_distance,lightningMiles=lightningKm?Math.round(lightningKm*.621371):null,lightningTime=obs.lightning_strike_last_epoch,obsEpoch=obs.timestamp||obs.epoch,ageSec=obsEpoch?Math.floor(Date.now()/1000-obsEpoch):null;
-        tempValue.textContent=`${airTempF}°`;
-        humidityValue.textContent=`Humidity ${humidity}%`;
-        rainValue.textContent=`${rainDay}"`;
-        rainRateValue.textContent=`Rate ${rainRate}"/hr`;
-        windValue.textContent=`${windMph}G${gustMph}`;
-        windSubValue.textContent=`${windDir} / MPH`;
-        lightningValue.textContent=lightningTime&&lightningMiles!==null?`${lightningMiles} MI`:"NONE";
-        lightningSubValue.textContent=lightningTime&&lightningMiles!==null?"Last strike distance":"No recent strike";
-        tempestUpdatedValue.textContent=obsEpoch?formatTime24(new Date(obsEpoch*1000).toISOString()):"--:--";
-        tempestAgeValue.textContent=ageSec!==null?`${ageSec}s ago`:"Age unavailable";
-        updateConditionCardClasses(gustMph,lightningMiles,ageSec)
-    }
-
-    catch(e){
-        console.error(e);
-        setTempestUnavailable(e.message)
-    }
-
-}
-async function loadServiceArea() {
-  try {
+async function loadServiceArea(){
+  try{
     const res = await fetch("assets/data/service-map.geojson", {
       cache: "no-store"
     });
 
-    if (!res.ok) {
+    if(!res.ok){
       throw new Error("Service area GeoJSON failed: " + res.status);
     }
 
@@ -268,10 +119,274 @@ async function loadServiceArea() {
     serviceAreaLayer.clearLayers();
     serviceAreaLayer.addData(data);
 
-  } catch (err) {
+  }catch(err){
     console.error("Unable to load service area boundary:", err);
   }
 }
+
+async function loadLzkArea(){
+  try{
+    const res = await fetch("assets/data/lzk_wfo.geojson", {
+      cache: "no-store"
+    });
+
+    if(!res.ok){
+      throw new Error("LZK area GeoJSON failed: " + res.status);
+    }
+
+    const data = await res.json();
+
+    lzkAreaLayer.clearLayers();
+    lzkAreaLayer.addData(data);
+
+  }catch(err){
+    console.error("Unable to load LZK area boundary:", err);
+  }
+}
+
+/* =========================
+   AREA BUTTONS
+========================= */
+
+function buildAreaButtons(){
+  const bar = document.getElementById("areaButtons");
+  if(!bar) return;
+
+  bar.innerHTML = "";
+
+  areaButtons.forEach(area => {
+    if(!area || !area.id) return;
+
+    const zone = document.createElement("div");
+    zone.className = "zone normal";
+    zone.dataset.zone = area.id;
+
+    const button = document.createElement("button");
+    button.className = "zone-btn";
+    button.type = "button";
+    button.textContent = area.label || area.title || area.id;
+    button.addEventListener("click", () => openZoneDetail(area.id));
+
+    zone.appendChild(button);
+    bar.appendChild(zone);
+  });
+}
+
+buildAreaButtons();
+
+/* =========================
+   LAYERS
+========================= */
+
+const stationLayer = L.layerGroup().addTo(map);
+const poiLayer = L.layerGroup().addTo(map);
+const stormTrackLayer = L.layerGroup().addTo(map);
+
+const radarLayer = L.tileLayer.wms("https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi", {
+  layers: "nexrad-n0q-900913",
+  format: "image/png",
+  transparent: true,
+  opacity: 0.58,
+  attribution: "Radar: Iowa State Mesonet / NEXRAD"
+}).addTo(map);
+
+const warningLayer = L.geoJSON(null, {
+  style: feature => {
+    const severity = getSeverity(feature.properties);
+
+    return {
+      color:
+        severity === "tornado-emergency" ? "#ff00ff" :
+        severity === "tornado-warning" ? "#7e22ce" :
+        "#f97316",
+      weight: severity === "tornado-emergency" ? 5 : 4,
+      fillColor:
+        severity === "tornado-emergency" ? "#dc2626" :
+        severity === "tornado-warning" ? "#7e22ce" :
+        "#f97316",
+      fillOpacity: severity === "tornado-emergency" ? 0.42 : 0.34
+    };
+  },
+  onEachFeature: (feature, layer) => {
+    layer.on("click", () => openDetail(buildAlertDetail(feature)));
+  }
+}).addTo(map);
+
+stations.forEach(station => {
+  L.marker([station.lat, station.lng], {
+    icon: L.divIcon({
+      className: "",
+      html: `<div class="station-marker" id="marker-${slug(station.name)}"></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    })
+  })
+  .bindPopup(`<strong>${station.name}</strong><br>${station.area || ""}`)
+  .addTo(stationLayer);
+});
+
+locations.forEach(location => {
+  L.marker([location.lat, location.lng], {
+    icon: L.divIcon({
+      className: "",
+      html: `<div class="poi-marker" id="location-marker-${slug(location.name)}"></div>`,
+      iconSize: [15, 15],
+      iconAnchor: [7, 7]
+    })
+  })
+  .bindPopup(`<strong>${location.name}</strong><br>Type: ${location.type || "Location"}<br>Watch radius: ${location.radius || "N/A"}`)
+  .addTo(poiLayer);
+});
+
+L.control.layers(null, {
+  "Radar Reflectivity": radarLayer,
+  "Storm Tracks": stormTrackLayer,
+  "Stations": stationLayer,
+  "Locations": poiLayer,
+  "Warning Polygons": warningLayer
+}, {
+  collapsed: false,
+  position: "topleft"
+}).addTo(map);
+
+function setLayerVisible(name, on){
+  const layers = {
+    radar: radarLayer,
+    serviceArea: serviceAreaLayer,
+    NWSwfo: lzkAreaLayer,
+    tracks: stormTrackLayer,
+    stations: stationLayer,
+    poi: poiLayer,
+    warnings: warningLayer
+  };
+
+  const layer = layers[name];
+  if(!layer) return;
+
+  if(on && !map.hasLayer(layer)){
+    layer.addTo(map);
+  }
+
+  if(!on && map.hasLayer(layer)){
+    map.removeLayer(layer);
+  }
+}
+
+window.setLayerVisible = setLayerVisible;
+
+function updateLocationMarkerProminence(){
+  document.querySelectorAll(".poi-marker").forEach(el => {
+    el.classList.toggle("zoomed", map.getZoom() >= 10);
+  });
+}
+
+map.on("zoomend", updateLocationMarkerProminence);
+updateLocationMarkerProminence();
+
+/* =========================
+   TEMPEST
+========================= */
+
+async function loadTempestConditions(){
+  if(!TEMPEST_STATION_ID || TEMPEST_TOKEN === "PASTE_YOUR_TEMPEST_TOKEN_HERE"){
+    setTempestUnavailable("Token not configured");
+    return;
+  }
+
+  try{
+    const res = await fetch(`https://swd.weatherflow.com/swd/rest/observations/station/${TEMPEST_STATION_ID}?token=${TEMPEST_TOKEN}`);
+
+    if(!res.ok){
+      throw new Error("Tempest API failed: " + res.status);
+    }
+
+    const data = await res.json();
+    const obs = data.obs && data.obs[0];
+
+    if(!obs){
+      throw new Error("No Tempest observation returned");
+    }
+
+    const airTempF = cToF(obs.air_temperature);
+    const humidity = safeRound(obs.relative_humidity);
+    const windMph = msToMph(obs.wind_avg);
+    const gustMph = msToMph(obs.wind_gust);
+    const windDir = degToCompass(obs.wind_direction);
+    const rainDay = mmToIn(obs.precip_accum_local_day);
+    const rainRate = mmToIn(obs.precip);
+    const lightningKm = obs.lightning_strike_last_distance;
+    const lightningMiles = lightningKm ? Math.round(lightningKm * 0.621371) : null;
+    const lightningTime = obs.lightning_strike_last_epoch;
+    const obsEpoch = obs.timestamp || obs.epoch;
+    const ageSec = obsEpoch ? Math.floor(Date.now() / 1000 - obsEpoch) : null;
+
+    setText("tempValue", `${airTempF}°`);
+    setText("humidityValue", `Humidity ${humidity}%`);
+    setText("rainValue", `${rainDay}"`);
+    setText("rainRateValue", `Rate ${rainRate}"/hr`);
+    setText("windValue", `${windMph}G${gustMph}`);
+    setText("windSubValue", `${windDir} / MPH`);
+
+    if(lightningTime && lightningMiles !== null){
+      setText("lightningValue", `${lightningMiles} MI`);
+      setText("lightningSubValue", "Last strike distance");
+    }else{
+      setText("lightningValue", "NONE");
+      setText("lightningSubValue", "No recent strike");
+    }
+
+    setText("tempestUpdatedValue", obsEpoch ? formatTime24(new Date(obsEpoch * 1000).toISOString()) : "--:--");
+    setText("tempestAgeValue", ageSec !== null ? `${ageSec}s ago` : "Age unavailable");
+
+    updateConditionCardClasses(gustMph, lightningMiles, ageSec);
+
+  }catch(err){
+    console.error("Tempest error:", err);
+    setTempestUnavailable(err.message);
+  }
+}
+
+function setTempestUnavailable(reason){
+  setText("tempValue", "--°");
+  setText("humidityValue", reason);
+  setText("rainValue", "--");
+  setText("rainRateValue", "Rate --");
+  setText("windValue", "--G--");
+  setText("windSubValue", "Direction --");
+  setText("lightningValue", "--");
+  setText("lightningSubValue", "Unavailable");
+  setText("tempestUpdatedValue", "--:--");
+  setText("tempestAgeValue", "Tempest unavailable");
+}
+
+function updateConditionCardClasses(gust, lightning, age){
+  const windCard = document.getElementById("windCard");
+  const lightningCard = document.getElementById("lightningCard");
+  const updatedCard = document.getElementById("updatedCard");
+
+  if(windCard) windCard.className = "condition-card wind";
+  if(lightningCard) lightningCard.className = "condition-card lightning";
+  if(updatedCard) updatedCard.className = "condition-card updated";
+
+  if(windCard){
+    if(gust >= 50) windCard.classList.add("warn");
+    else if(gust >= 35) windCard.classList.add("caution");
+  }
+
+  if(lightningCard){
+    if(lightning !== null && lightning <= 10) lightningCard.classList.add("lightning-near");
+    else if(lightning !== null && lightning <= 20) lightningCard.classList.add("caution");
+  }
+
+  if(updatedCard){
+    if(age !== null && age > 180) updatedCard.classList.add("warn");
+    else if(age !== null && age > 90) updatedCard.classList.add("caution");
+  }
+}
+
+/* =========================
+   OUTLOOK DATA
+========================= */
 
 async function loadOutlookData(){
   const base = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer";
@@ -286,454 +401,1348 @@ async function loadOutlookData(){
   for(const key in endpoints){
     try{
       const res = await fetch(endpoints[key]);
-      if(!res.ok) throw new Error(`${key} failed: ${res.status}`);
+
+      if(!res.ok){
+        throw new Error(`${key} failed: ${res.status}`);
+      }
+
       outlookData[key] = await res.json();
+
     }catch(err){
       console.warn("Outlook load failed:", key, err);
       outlookData[key] = null;
     }
   }
 }
-function setTrackWindow(minutes){
-    TRACK_WINDOW_MINUTES=Number(minutes)||60;
-    document.querySelectorAll("[data-track-minutes]").forEach(b=>b.classList.toggle("active",Number(b.dataset.trackMinutes)===TRACK_WINDOW_MINUTES));
-    redrawStormTracks()
-}
-
-function redrawStormTracks(){
-    stormTrackLayer.clearLayers();
-    latestAllArkansasAlerts.forEach(a=>{
-        if(shouldDrawTrackForAlert(a))drawStormTrack(a)
-    });
-    latestCustomStormTracks.forEach(drawCustomStormTrack)
-}
-
-async function loadCustomStormTracks(){
-    try{
-        const r=await fetch("storm-tracks.json",{
-            cache:"no-store"
-        });
-        if(!r.ok){
-            latestCustomStormTracks=[];
-            redrawStormTracks();
-            return
-        }
-
-        const data=await r.json();
-        latestCustomStormTracks=Array.isArray(data)?data:(Array.isArray(data.tracks)?data.tracks:[]);
-        redrawStormTracks()
-    }
-
-    catch(e){
-        latestCustomStormTracks=[]
-    }
-
-}
-
-async function loadAlerts(){
-    const c=document.getElementById("alerts");
-    c.innerHTML="";
-    warningLayer.clearLayers();
-    stormTrackLayer.clearLayers();
-    latestPanelAlerts=[];
-    resetZones();
-    resetStationMarkers();
-    updateStationSummary();
-    try{
-        const res=await fetch("https://api.weather.gov/alerts/active",{
-            headers:{
-                Accept:"application/geo+json"
-            }
-
-        });
-        if(!res.ok)throw new Error("NWS API failed: "+res.status);
-        const data=await res.json();
-        infoTime.textContent=formatTime24(new Date().toISOString());
-        const all=data.features.filter(isArkansasRelevantAlert).sort(sortAlerts);
-        latestAllArkansasAlerts=all;
-        const panel=all.filter(isNwsLittleRockAlert).sort(sortAlerts);
-        latestPanelAlerts=panel;
-        all.forEach(alert=>{
-            if(shouldDrawPolygon(alert))warningLayer.addData(alert);
-            if(shouldDrawTrackForAlert(alert))drawStormTrack(alert);
-            const d=buildAlertDetail(alert);
-            applyZoneStatus(d.affectedStations,getSeverity(alert.properties));
-            highlightImpactedStations(d.affectedStations)
-        });
-        updateStationSummary();
-        if(!panel.length)c.innerHTML=`<div class="alert-box normal"><div class="alert-title">No LZK Watches or Warnings</div><div class="alert-meta">No active tracked watches or warnings issued by NWS Little Rock.</div></div>`;
-        panel.forEach(alert=>{
-            const p=alert.properties,s=getSeverity(p),d=buildAlertDetail(alert);
-            c.insertAdjacentHTML("beforeend",`<div class="alert-box ${s}" onclick='openDetailById("${alert.id}")'><div class="alert-title">${formatTitle(p)}</div><div class="alert-meta"><strong>Issued by:</strong> ${p.senderName||"NWS Little Rock"}<br><strong>Expires:</strong> ${formatTime24(p.expires)}<br><strong>Areas:</strong> ${formatAreas(p.areaDesc)}</div><div class="station-hit"><div class="station-hit-title">Affected Stations</div>${formatAffectedStations(d.affectedStations)}</div></div>`)
-        });
-        maintainMapViewAfterRefresh()
-    }
-
-    catch(e){
-        console.error(e);
-        c.innerHTML=`<div class="alert-box tornado-warning"><div class="alert-title">Unable to load alerts</div><div class="alert-meta">${e.message}</div></div>`
-    }
-
-}
-
-function openZoneDetail(zoneId){
-    const profile=zoneProfiles[zoneId];
-    if(!profile)return;
-    const zoneStations=stations.filter(s=>profile.stations.includes(s.name));
-    const zonePoint=turf.point([profile.center[1],profile.center[0]]);
-    const active=latestAllArkansasAlerts.filter(a=>{
-        const d=buildAlertDetail(a);
-        return d.affectedStations.some(s=>profile.stations.includes(s.name))
-    });
-    detailTitle.textContent=profile.title;
-    detailMeta.innerHTML=`<strong>Station Radar View</strong><br>Local station group view centered on ${profile.title}`;
-    detailBody.innerHTML=`<div class="detail-section"><strong>Station Radar View</strong><div id="stationRadarMap" style="height:280px;margin-top:10px;border-radius:10px;overflow:hidden;"></div></div><div class="detail-section"><strong>Outlook Data</strong><ul class="detail-list"><li>Tornado — <strong>${getOutlookLabel(zonePoint, outlookData.tornado, "tornado")}</strong></li>
-<li>Hail — <strong>${getOutlookLabel(zonePoint, outlookData.hail, "hail")}</strong></li>
-<li>Wind — <strong>${getOutlookLabel(zonePoint, outlookData.wind, "wind")}</strong></li>
-<li>Excessive Rain — <strong>${getOutlookLabel(zonePoint, outlookData.excessiveRain, "excessiveRain")}</strong></li>${
-        s.name
-    }
-
-    </li>`).join("")}</ul></div><div class="detail-section"><strong>Current Watches and Warnings</strong><ul class="detail-list">${active.length?active.map(a=>`<li><strong>${
-        formatTitle(a.properties)
-    }
-
-    </strong> — Expires ${
-        formatTime24(a.properties.expires)
-    }
-
-    </li>`).join(""):"<li>No current watches or warnings for this station group.</li>"}</ul></div>`;
-    detailOverlay.style.display="flex";
-    setTimeout(()=>buildStationRadarMap(profile,zoneStations),100)
-}
-
-function buildStationRadarMap(profile,zoneStations){
-    const mini=L.map("stationRadarMap",{
-        zoomControl:true,attributionControl:false
-    }).setView(profile.center,9);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{
-        maxZoom:20
-    }).addTo(mini);
-    latestAllArkansasAlerts.forEach(a=>{
-        if(shouldDrawPolygon(a))L.geoJSON(a,{
-            style:{
-                color:getSeverity(a.properties)==="tornado-warning"?"#7e22ce":"#f97316",weight:3,fillOpacity:.25
-            }
-
-        }).addTo(mini)
-    });
-    zoneStations.forEach(s=>L.circleMarker([s.lat,s.lng],{
-        radius:7,color:"#fff",weight:2,fillColor:"#005bea",fillOpacity:1
-    }).bindPopup(`<strong>${s.name}</strong>`).addTo(mini))
-}
 
 function getOutlookLabel(point, geojson, type){
-    if(!geojson || !geojson.features) return "Not loaded";
+  if(!geojson || !geojson.features){
+    return "Not loaded";
+  }
 
-    let best = "LOW";
+  let best = "LOW";
 
-    geojson.features.forEach(f => {
-        try{
-            if(f.geometry && turf.booleanPointInPolygon(point, f)){
-                best = readOutlookProperties(f.properties, type);
-            }
-        } catch(e){}
+  geojson.features.forEach(feature => {
+    if(!feature.geometry) return;
+
+    try{
+      if(turf.booleanPointInPolygon(point, feature)){
+        best = readOutlookProperties(feature.properties || {}, type);
+      }
+    }catch(err){}
+  });
+
+  return best;
+}
+
+function readOutlookProperties(props, type){
+  const raw =
+    props.LABEL ||
+    props.label ||
+    props.RISK ||
+    props.risk ||
+    props.CATEGORY ||
+    props.category ||
+    props.DN ||
+    props.dn ||
+    props.THRESHOLD ||
+    props.threshold ||
+    props.OUTLOOK ||
+    props.outlook ||
+    props.name ||
+    props.Name ||
+    "";
+
+  const text = String(raw).trim();
+  const upper = text.toUpperCase();
+
+  if(type === "tornado"){
+    if(upper.includes("CIG 3") || upper.includes("CIG3") || upper === "3") {
+      return "EXTREME (Violent EF4+ possible)";
+    }
+    if(upper.includes("CIG 2") || upper.includes("CIG2") || upper === "2") {
+      return "HIGH (EF3+ possible)";
+    }
+    if(upper.includes("CIG 1") || upper.includes("CIG1") || upper === "1") {
+      return "ELEVATED (EF0–EF2 possible)";
+    }
+    if(upper.includes("SIG")) {
+      return "ELEVATED (Significant tornado possible)";
+    }
+    if(upper.includes("HIGH")) return "EXTREME";
+    if(upper.includes("MODERATE")) return "HIGH";
+    if(upper.includes("ENHANCED")) return "ELEVATED";
+    if(upper.includes("SLIGHT")) return "ELEVATED";
+    if(upper.includes("MARGINAL")) return "LIMITED";
+    return upper || "LOW";
+  }
+
+  if(type === "hail"){
+    if(upper.includes("CIG 2") || upper.includes("CIG2") || upper === "2") {
+      return "DESTRUCTIVE (Baseball+ hail possible)";
+    }
+    if(upper.includes("CIG 1") || upper.includes("CIG1") || upper === "1") {
+      return "SIGNIFICANT (2 inch+ hail possible)";
+    }
+    if(upper.includes("SIG")) {
+      return "SIGNIFICANT (2 inch+ hail possible)";
+    }
+    if(upper.includes("HIGH")) return "DESTRUCTIVE";
+    if(upper.includes("MODERATE")) return "DESTRUCTIVE";
+    if(upper.includes("ENHANCED")) return "SIGNIFICANT";
+    if(upper.includes("SLIGHT")) return "ELEVATED";
+    if(upper.includes("MARGINAL")) return "LIMITED";
+    return upper || "LOW";
+  }
+
+  if(type === "wind"){
+    if(upper.includes("CIG 3") || upper.includes("CIG3") || upper === "3") {
+      return "EXTREME (Derecho / widespread damage possible)";
+    }
+    if(upper.includes("CIG 2") || upper.includes("CIG2") || upper === "2") {
+      return "SEVERE (Organized damaging wind possible)";
+    }
+    if(upper.includes("CIG 1") || upper.includes("CIG1") || upper === "1") {
+      return "DAMAGING (75+ mph possible)";
+    }
+    if(upper.includes("SIG")) {
+      return "DAMAGING (75+ mph possible)";
+    }
+    if(upper.includes("HIGH")) return "EXTREME";
+    if(upper.includes("MODERATE")) return "SEVERE";
+    if(upper.includes("ENHANCED")) return "DAMAGING";
+    if(upper.includes("SLIGHT")) return "ELEVATED";
+    if(upper.includes("MARGINAL")) return "LIMITED";
+    return upper || "LOW";
+  }
+
+  if(type === "excessiveRain"){
+    const lower = upper.toLowerCase();
+
+    if(lower.includes("high")) return "EXTREME";
+    if(lower.includes("moderate")) return "HIGH";
+    if(lower.includes("slight")) return "ELEVATED";
+    if(lower.includes("marginal")) return "LIMITED";
+
+    return upper || "LOW";
+  }
+
+  return upper || "LOW";
+}
+
+/* =========================
+   ALERTS
+========================= */
+
+async function loadAlerts(){
+  const container = document.getElementById("alerts");
+
+  if(container){
+    container.innerHTML = "";
+  }
+
+  warningLayer.clearLayers();
+  stormTrackLayer.clearLayers();
+  latestPanelAlerts = [];
+
+  resetZones();
+  resetStationMarkers();
+  updateStationSummary();
+
+  try{
+    const res = await fetch("https://api.weather.gov/alerts/active", {
+      headers: {
+        Accept: "application/geo+json"
+      }
     });
 
-    return best;
-}
+    if(!res.ok){
+      throw new Error("NWS API failed: " + res.status);
+    }
 
-function readOutlookProperties(p){
-    return p.LABEL||p.label||p.RISK||p.risk||p.CATEGORY||p.category||p.DN||p.dn||p.THRESHOLD||p.threshold||"Included"
-}
+    const data = await res.json();
 
-function maintainMapViewAfterRefresh(){
-    if(Date.now()-lastUserMapActivity<USER_ACTIVITY_HOLD_MS)return;
-    map.setView(AR_CENTER,AR_ZOOM,{
-        animate:false
-    })
+    setText("infoTime", formatTime24(new Date().toISOString()));
+
+    const allAlerts = data.features
+      .filter(isArkansasRelevantAlert)
+      .sort(sortAlerts);
+
+    latestAllArkansasAlerts = allAlerts;
+
+    const panelAlerts = allAlerts
+      .filter(isNwsLittleRockAlert)
+      .sort(sortAlerts);
+
+    latestPanelAlerts = panelAlerts;
+
+    allAlerts.forEach(alert => {
+      if(shouldDrawPolygon(alert)){
+        warningLayer.addData(alert);
+      }
+
+      if(shouldDrawTrackForAlert(alert)){
+        drawStormTrack(alert);
+      }
+
+      const detail = buildAlertDetail(alert);
+      applyZoneStatus(detail.affectedStations, getSeverity(alert.properties));
+      highlightImpactedStations(detail.affectedStations);
+    });
+
+    updateStationSummary();
+
+    if(container && !panelAlerts.length){
+      container.innerHTML = `
+        <div class="alert-box normal">
+          <div class="alert-title">No LZK Watches or Warnings</div>
+          <div class="alert-meta">No active tracked watches or warnings issued by NWS Little Rock.</div>
+        </div>
+      `;
+    }
+
+    if(container){
+      panelAlerts.forEach(alert => {
+        const p = alert.properties;
+        const severity = getSeverity(p);
+        const detail = buildAlertDetail(alert);
+
+        container.insertAdjacentHTML("beforeend", `
+          <div class="alert-box ${severity}" onclick='openDetailById("${alert.id}")'>
+            <div class="alert-title">${formatTitle(p)}</div>
+            <div class="alert-meta">
+              <strong>Issued by:</strong> ${p.senderName || "NWS Little Rock"}<br>
+              <strong>Expires:</strong> ${formatTime24(p.expires)}<br>
+              <strong>Areas:</strong> ${formatAreas(p.areaDesc)}
+            </div>
+            <div class="station-hit">
+              <div class="station-hit-title">Affected Stations</div>
+              ${formatAffectedStations(detail.affectedStations)}
+            </div>
+          </div>
+        `);
+      });
+    }
+
+    maintainMapViewAfterRefresh();
+
+  }catch(err){
+    console.error(err);
+
+    if(container){
+      container.innerHTML = `
+        <div class="alert-box tornado-warning">
+          <div class="alert-title">Unable to load alerts</div>
+          <div class="alert-meta">${err.message}</div>
+        </div>
+      `;
+    }
+  }
 }
 
 function isArkansasRelevantAlert(alert){
-    const p=alert.properties,event=p.event||"",ugc=p.geocode?.UGC||[],area=p.areaDesc||"";
-    const isAR=ugc.some(c=>c.startsWith("AR"))||area.includes(", AR")||area.includes(" AR;")||area.endsWith(" AR");
-    return isAR&&["Tornado Watch","Severe Thunderstorm Watch","Severe Thunderstorm Warning","Tornado Warning","Special Weather Statement"].includes(event)
+  const p = alert.properties || {};
+  const event = p.event || "";
+  const ugc = p.geocode?.UGC || [];
+  const area = p.areaDesc || "";
+
+  const isAR =
+    ugc.some(code => String(code).startsWith("AR")) ||
+    area.includes(", AR") ||
+    area.includes(" AR;") ||
+    area.endsWith(" AR");
+
+  const tracked = [
+    "Tornado Watch",
+    "Severe Thunderstorm Watch",
+    "Severe Thunderstorm Warning",
+    "Tornado Warning",
+    "Special Weather Statement"
+  ].includes(event);
+
+  return isAR && tracked;
 }
 
 function isNwsLittleRockAlert(alert){
-    const p=alert.properties,sn=(p.senderName||"").toUpperCase(),sender=(p.sender||"").toUpperCase(),params=p.parameters||{
-    };
+  const p = alert.properties || {};
+  const senderName = (p.senderName || "").toUpperCase();
+  const sender = (p.sender || "").toUpperCase();
+  const params = p.parameters || {};
 
-    const awips=Array.isArray(params.AWIPSidentifier)?params.AWIPSidentifier.join(" ").toUpperCase():"",wmo=Array.isArray(params.WMOidentifier)?params.WMOidentifier.join(" ").toUpperCase():"",headline=Array.isArray(params.NWSheadline)?params.NWSheadline.join(" ").toUpperCase():"";
-    return sn.includes("LITTLE ROCK")||sender.includes("LZK")||awips.includes("LZK")||wmo.includes("KLZK")||headline.includes("LITTLE ROCK")
+  const awips = Array.isArray(params.AWIPSidentifier)
+    ? params.AWIPSidentifier.join(" ").toUpperCase()
+    : "";
+
+  const wmo = Array.isArray(params.WMOidentifier)
+    ? params.WMOidentifier.join(" ").toUpperCase()
+    : "";
+
+  const headline = Array.isArray(params.NWSheadline)
+    ? params.NWSheadline.join(" ").toUpperCase()
+    : "";
+
+  return (
+    senderName.includes("LITTLE ROCK") ||
+    sender.includes("LZK") ||
+    awips.includes("LZK") ||
+    wmo.includes("KLZK") ||
+    headline.includes("LITTLE ROCK")
+  );
 }
 
 function shouldDrawPolygon(alert){
-    const event=alert.properties.event||"",s=getSeverity(alert.properties);
-    return alert.geometry&&(event==="Tornado Warning"||event==="Severe Thunderstorm Warning"||s==="tornado-emergency")
+  const event = alert.properties?.event || "";
+  const severity = getSeverity(alert.properties || {});
+
+  return Boolean(alert.geometry) && (
+    event === "Tornado Warning" ||
+    event === "Severe Thunderstorm Warning" ||
+    severity === "tornado-emergency"
+  );
 }
 
 function getSeverity(p){
-    const event=p.event||"",text=`${p.headline||""} ${p.description||""} ${p.instruction||""}`.toUpperCase();
-    if(event==="Tornado Warning"&&text.includes("TORNADO EMERGENCY"))return"tornado-emergency";
-    if(event==="Tornado Warning")return"tornado-warning";
-    if(event==="Tornado Watch")return"tornado-watch";
-    if(event==="Severe Thunderstorm Warning")return"tstorm-warning";
-    if(event==="Severe Thunderstorm Watch")return"tstorm-watch";
-    return"normal"
+  const event = p.event || "";
+  const text = `${p.headline || ""} ${p.description || ""} ${p.instruction || ""}`.toUpperCase();
+
+  if(event === "Tornado Warning" && text.includes("TORNADO EMERGENCY")){
+    return "tornado-emergency";
+  }
+
+  if(event === "Tornado Warning") return "tornado-warning";
+  if(event === "Tornado Watch") return "tornado-watch";
+  if(event === "Severe Thunderstorm Warning") return "tstorm-warning";
+  if(event === "Severe Thunderstorm Watch") return "tstorm-watch";
+
+  return "normal";
 }
 
 function formatTitle(p){
-    const n=getAlertNumber(p),s=getSeverity(p);
-    if(s==="tornado-emergency")return n?`Tornado Emergency #${n}`:"Tornado Emergency";
-    return n?`${p.event} #${n}`:(p.event||"Weather Alert")
+  const number = getAlertNumber(p);
+  const severity = getSeverity(p);
+
+  if(severity === "tornado-emergency"){
+    return number ? `Tornado Emergency #${number}` : "Tornado Emergency";
+  }
+
+  return number ? `${p.event} #${number}` : (p.event || "Weather Alert");
 }
 
 function getAlertNumber(p){
-    const v=Array.isArray(p.parameters?.VTEC)?p.parameters.VTEC:[];
-    for(const x of v){
-        const raw=String(x).split(".")[6];
-        if(raw&&/^\d+$/.test(raw))return String(Number(raw))
-    }
+  const vtec = Array.isArray(p.parameters?.VTEC) ? p.parameters.VTEC : [];
 
-    const m=(p.headline||"").match(/(?:watch|warning)\s+(\d+)/i);
-    return m?m[1]:""
+  for(const item of vtec){
+    const raw = String(item).split(".")[6];
+
+    if(raw && /^\d+$/.test(raw)){
+      return String(Number(raw));
+    }
+  }
+
+  const match = (p.headline || "").match(/(?:watch|warning)\s+(\d+)/i);
+  return match ? match[1] : "";
 }
+
+/* =========================
+   DETAIL BUILDING
+========================= */
 
 function buildAlertDetail(alert){
-    const p=alert.properties,motion=parseStormMotion(p),origin=parseStormOrigin(alert,p),affectedStations=[],affectedTowns=[],affectedPOI=[],bulletin=extractImpactedAreasFromBulletin(p),ugc=getAlertUgcCodes(p);
-    if(alert.geometry){
-        stations.forEach(s=>{
-            if(pointInsideAlert(alert,s))affectedStations.push(s)
-        });
-        locations.forEach(l=>{
-            if(pointInsideAlert(alert,l))affectedPOI.push(l)
-        });
-        bulletin.forEach(name=>{
-            const t=towns.find(x=>normalizeName(x.name)===normalizeName(name));
-            affectedTowns.push(t||{
-                name,zone:[],impact:"Timing not available"
-            })
-        })
-    }
+  const p = alert.properties || {};
+  const motion = parseStormMotion(p);
+  const origin = parseStormOrigin(alert, p);
+  const affectedStations = [];
+  const affectedTowns = [];
+  const affectedPOI = [];
+  const bulletin = extractImpactedAreasFromBulletin(p);
+  const ugc = getAlertUgcCodes(p);
 
-    else{
-        stations.forEach(s=>{
-            if(itemMatchesAlertUgc(s,ugc,p.areaDesc))affectedStations.push(s)
-        });
-        towns.forEach(t=>{
-            if(itemMatchesAlertUgc(t,ugc,p.areaDesc))affectedTowns.push(t)
-        });
-        locations.forEach(l=>{
-            if(areaLooksRelevantToPOI(p.areaDesc||"",l))affectedPOI.push(l)
-        })
-    }
+  if(alert.geometry){
+    stations.forEach(station => {
+      if(pointInsideAlert(alert, station)){
+        affectedStations.push(station);
+      }
+    });
 
-    return{
-        id:alert.id,title:formatTitle(p),event:p.event||"",severity:getSeverity(p),expires:p.expires,areaDesc:p.areaDesc||"",motion,stormOrigin:origin,affectedStations:dedupeByName(affectedStations).map(s=>({
-            ...s,impact:estimateImpactTime(alert,s,motion,origin)
-        })),affectedTowns:dedupeByName(affectedTowns).map(t=>({
-            ...t,impact:(t.lat!==undefined&&t.lng!==undefined)?estimateImpactTime(alert,t,motion,origin):(t.impact||"Timing not available")
-        })),affectedPOI:dedupeByName(affectedPOI).map(x=>({
-            ...x,impact:estimateImpactTime(alert,x,motion,origin)
-        })),impactedAreas:bulletin,description:p.description||"",instruction:p.instruction||"",geometry:alert.geometry||null
-    }
+    locations.forEach(location => {
+      if(pointInsideAlert(alert, location)){
+        affectedPOI.push(location);
+      }
+    });
 
+    bulletin.forEach(name => {
+      const town = towns.find(t => normalizeName(t.name) === normalizeName(name));
+
+      affectedTowns.push(town || {
+        name,
+        zone: [],
+        impact: "Timing not available"
+      });
+    });
+
+  }else{
+    stations.forEach(station => {
+      if(itemMatchesAlertUgc(station, ugc, p.areaDesc)){
+        affectedStations.push(station);
+      }
+    });
+
+    towns.forEach(town => {
+      if(itemMatchesAlertUgc(town, ugc, p.areaDesc)){
+        affectedTowns.push(town);
+      }
+    });
+
+    locations.forEach(location => {
+      if(areaLooksRelevantToPOI(p.areaDesc || "", location)){
+        affectedPOI.push(location);
+      }
+    });
+  }
+
+  return {
+    id: alert.id,
+    title: formatTitle(p),
+    event: p.event || "",
+    severity: getSeverity(p),
+    expires: p.expires,
+    areaDesc: p.areaDesc || "",
+    motion,
+    stormOrigin: origin,
+    affectedStations: dedupeByName(affectedStations).map(station => ({
+      ...station,
+      impact: estimateImpactTime(alert, station, motion, origin)
+    })),
+    affectedTowns: dedupeByName(affectedTowns).map(town => ({
+      ...town,
+      impact: town.lat !== undefined && town.lng !== undefined
+        ? estimateImpactTime(alert, town, motion, origin)
+        : (town.impact || "Timing not available")
+    })),
+    affectedPOI: dedupeByName(affectedPOI).map(location => ({
+      ...location,
+      impact: estimateImpactTime(alert, location, motion, origin)
+    })),
+    impactedAreas: bulletin,
+    description: p.description || "",
+    instruction: p.instruction || "",
+    geometry: alert.geometry || null
+  };
 }
 
-function formatAffectedStations(list){
-    return list.length?list.map(s=>`<span class="station-list-line">${s.name} — ${s.impact}</span>`).join(""):`<span class="station-list-line">No MEMS stations currently inside this alert area.</span>`
+function openDetailById(id){
+  const alert = latestPanelAlerts.find(item => item.id === id);
+  if(alert){
+    openDetail(buildAlertDetail(alert));
+  }
 }
+
+function openDetail(detail){
+  setText("detailTitle", detail.title);
+
+  setHTML("detailMeta", `
+    <strong>Expires:</strong> ${formatTime24(detail.expires)}<br>
+    <strong>Motion:</strong> ${detail.motion ? `${detail.motion.direction} at ${detail.motion.speed} mph` : "Not available"}<br>
+    <strong>Areas:</strong> ${formatAreas(detail.areaDesc)}
+  `);
+
+  const stationsHtml = formatCondensedAlphabetizedList(
+    detail.affectedStations,
+    station => `${station.name} <strong>(${station.impact})</strong>`,
+    "No MEMS stations currently inside this alert area."
+  );
+
+  const areasHtml = formatCondensedAlphabetizedList(
+    detail.affectedTowns,
+    town => `${town.name} <strong>(${town.impact})</strong>`,
+    "No impacted areas listed in the NWS bulletin."
+  );
+
+  const locationHtml = formatLocationsByType(detail.affectedPOI);
+
+  setHTML("detailBody", `
+    <div class="detail-section">
+      <strong>Affected Stations</strong>
+      <ul class="detail-list">${stationsHtml}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Areas Impacted</strong>
+      <ul class="detail-list">${areasHtml}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Locations</strong>
+      <ul class="detail-list">${locationHtml}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Instruction</strong>
+      <div>${detail.instruction || "No instruction included."}</div>
+    </div>
+  `);
+
+  const overlay = document.getElementById("detailOverlay");
+  if(overlay){
+    overlay.style.display = "flex";
+  }
+}
+
+function closeDetail(){
+  const overlay = document.getElementById("detailOverlay");
+  if(overlay){
+    overlay.style.display = "none";
+  }
+}
+
+window.closeDetail = closeDetail;
+
+/* =========================
+   ZONE DETAIL MODAL
+========================= */
+
+function openZoneDetail(zoneId){
+  const profile = zoneProfiles[zoneId];
+  if(!profile || !profile.center){
+    return;
+  }
+
+  const zoneStations = stations.filter(station => profile.stations.includes(station.name));
+  const zonePoint = turf.point([profile.center[1], profile.center[0]]);
+
+  const activeAlerts = latestAllArkansasAlerts.filter(alert => {
+    const detail = buildAlertDetail(alert);
+    return detail.affectedStations.some(station => profile.stations.includes(station.name));
+  });
+
+  const stationListHtml = zoneStations.length
+    ? zoneStations.map(station => `<li>${station.name}</li>`).join("")
+    : `<li>No stations assigned to this area.</li>`;
+
+  const activeAlertsHtml = activeAlerts.length
+    ? activeAlerts.map(alert => `
+      <li>
+        <strong>${formatTitle(alert.properties)}</strong>
+        — Expires ${formatTime24(alert.properties.expires)}
+      </li>
+    `).join("")
+    : `<li>No current watches or warnings for this station group.</li>`;
+
+  const tornadoOutlook = getOutlookLabel(zonePoint, outlookData.tornado, "tornado");
+  const hailOutlook = getOutlookLabel(zonePoint, outlookData.hail, "hail");
+  const windOutlook = getOutlookLabel(zonePoint, outlookData.wind, "wind");
+  const rainOutlook = getOutlookLabel(zonePoint, outlookData.excessiveRain, "excessiveRain");
+
+  setText("detailTitle", profile.title || zoneId);
+
+  setHTML("detailMeta", `
+    <strong>Station Radar View</strong><br>
+    Local station group view centered on ${profile.title || zoneId}
+  `);
+
+  setHTML("detailBody", `
+    <div class="detail-section">
+      <strong>Station Radar View</strong>
+      <div id="stationRadarMap" style="height:280px;margin-top:10px;border-radius:10px;overflow:hidden;"></div>
+    </div>
+
+    <div class="detail-section">
+      <strong>Outlook Data</strong>
+      <div style="font-size:12px;opacity:.75;margin-top:4px;margin-bottom:8px;">
+        Plain-language severe weather potential for this station area.
+      </div>
+      <ul class="detail-list">
+        <li>Tornado — <strong>${tornadoOutlook}</strong></li>
+        <li>Hail — <strong>${hailOutlook}</strong></li>
+        <li>Wind — <strong>${windOutlook}</strong></li>
+        <li>Excessive Rain — <strong>${rainOutlook}</strong></li>
+      </ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Stations</strong>
+      <ul class="detail-list">${stationListHtml}</ul>
+    </div>
+
+    <div class="detail-section">
+      <strong>Current Watches and Warnings</strong>
+      <ul class="detail-list">${activeAlertsHtml}</ul>
+    </div>
+  `);
+
+  const overlay = document.getElementById("detailOverlay");
+  if(overlay){
+    overlay.style.display = "flex";
+  }
+
+  setTimeout(() => {
+    buildStationRadarMap(profile, zoneStations);
+  }, 100);
+}
+
+window.openZoneDetail = openZoneDetail;
+
+function buildStationRadarMap(profile, zoneStations){
+  const container = document.getElementById("stationRadarMap");
+  if(!container) return;
+
+  const mini = L.map("stationRadarMap", {
+    zoomControl: true,
+    attributionControl: false
+  }).setView(profile.center, 9);
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom: 20
+  }).addTo(mini);
+
+  latestAllArkansasAlerts.forEach(alert => {
+    if(shouldDrawPolygon(alert)){
+      L.geoJSON(alert, {
+        style: {
+          color: getSeverity(alert.properties) === "tornado-warning" ? "#7e22ce" : "#f97316",
+          weight: 3,
+          fillOpacity: 0.25
+        }
+      }).addTo(mini);
+    }
+  });
+
+  zoneStations.forEach(station => {
+    L.circleMarker([station.lat, station.lng], {
+      radius: 7,
+      color: "#fff",
+      weight: 2,
+      fillColor: "#005bea",
+      fillOpacity: 1
+    })
+    .bindPopup(`<strong>${station.name}</strong>`)
+    .addTo(mini);
+  });
+
+  setTimeout(() => {
+    mini.invalidateSize();
+  }, 150);
+}
+
+/* =========================
+   ALERT MATCHING
+========================= */
 
 function getAlertUgcCodes(p){
-    return (p.geocode&&Array.isArray(p.geocode.UGC)?p.geocode.UGC:[]).map(c=>String(c).toUpperCase())
+  return (p.geocode && Array.isArray(p.geocode.UGC) ? p.geocode.UGC : [])
+    .map(code => String(code).toUpperCase());
 }
 
-function itemMatchesAlertUgc(item,codes,areaDesc){
-    const itemCodes=Array.isArray(item.countyCodes)?item.countyCodes.map(c=>String(c).toUpperCase()):[];
-    if(codes.length&&itemCodes.length)return itemCodes.some(c=>codes.includes(c));
-    const a=String(areaDesc||"").toLowerCase();
-    if(itemCodes.includes("ARC119"))return a.includes("pulaski");
-    if(itemCodes.includes("ARC085"))return a.includes("lonoke");
-    if(itemCodes.includes("ARC053"))return a.includes("grant");
-    return false
+function itemMatchesAlertUgc(item, codes, areaDesc){
+  const itemCodes = Array.isArray(item.countyCodes)
+    ? item.countyCodes.map(code => String(code).toUpperCase())
+    : [];
+
+  if(codes.length && itemCodes.length){
+    return itemCodes.some(code => codes.includes(code));
+  }
+
+  const area = String(areaDesc || "").toLowerCase();
+
+  if(itemCodes.includes("ARC119")) return area.includes("pulaski");
+  if(itemCodes.includes("ARC085")) return area.includes("lonoke");
+  if(itemCodes.includes("ARC053")) return area.includes("grant");
+
+  return false;
 }
 
-function pointInsideAlert(alert,point){
-    try{
-        return !!alert.geometry&&turf.booleanPointInPolygon(turf.point([point.lng,point.lat]),alert)
-    }
-
-    catch(e){
-        return false
-    }
-
+function pointInsideAlert(alert, point){
+  try{
+    return Boolean(alert.geometry) && turf.booleanPointInPolygon(
+      turf.point([point.lng, point.lat]),
+      alert
+    );
+  }catch(err){
+    return false;
+  }
 }
 
-function normalizeName(v){
-    return String(v||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()
+function areaLooksRelevantToPOI(area, location){
+  const areaText = String(area || "").toLowerCase();
+  const locationText = `${location.name || ""} ${location.area || ""}`.toLowerCase();
+
+  if(locationText.includes("cabot") || locationText.includes("lonoke")) return areaText.includes("lonoke");
+  if(locationText.includes("sheridan") || locationText.includes("grant")) return areaText.includes("grant");
+  if(locationText.includes("benton") || locationText.includes("saline")) return areaText.includes("saline");
+
+  return areaText.includes("pulaski");
 }
 
-function dedupeByName(items){
-    const seen=new Set();
-    return items.filter(i=>{
-        const k=normalizeName(i.name);
-        if(!k||seen.has(k))return false;
-        seen.add(k);
-        return true
-    })
-}
+/* =========================
+   BULLETIN PARSING
+========================= */
 
 function extractImpactedAreasFromBulletin(p){
-    const text=String(p.description||"").replace(/\r/g,""),results=[];
-    [/Locations impacted include\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i,/Other locations impacted by this severe thunderstorm include\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i,/The tornado will be near\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i].forEach(pattern=>{
-        const m=text.match(pattern);
-        if(m&&m[1])results.push(...splitBulletinPlaceList(m[1]))
-    });
-    return [...new Set(results.map(cleanBulletinPlace).filter(Boolean))]
+  const text = String(p.description || "").replace(/\r/g, "");
+  const results = [];
+
+  const patterns = [
+    /Locations impacted include\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i,
+    /Other locations impacted by this severe thunderstorm include\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i,
+    /The tornado will be near\.\.\.\s*([\s\S]*?)(?:\n\s*\n|PRECAUTIONARY\/PREPAREDNESS ACTIONS|HAZARD|SOURCE|IMPACT|This includes|&&|$)/i
+  ];
+
+  patterns.forEach(pattern => {
+    const match = text.match(pattern);
+
+    if(match && match[1]){
+      results.push(...splitBulletinPlaceList(match[1]));
+    }
+  });
+
+  return [...new Set(results.map(cleanBulletinPlace).filter(Boolean))];
 }
 
 function splitBulletinPlaceList(block){
-    return String(block||"")
-        .replace(/\n/g," ")
-        .replace(/\s+/g," ")
-        .split(/,|;|\band\b/i)
-        .map(cleanBulletinPlace)
-        .filter(Boolean)
+  return String(block || "")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .split(/,|;|\band\b/i)
+    .map(cleanBulletinPlace)
+    .filter(Boolean);
 }
 
-function cleanBulletinPlace(v){
-    return String(v||"")
-        .replace(/\b(around|near|including|mainly|about|between|after|before)\b/ig,"")
-        .replace(/\b\d{1,2}:\d{2}\s*(?:AM|PM)?\b/ig,"")
-        .replace(/\b\d{1,2}\s*(?:AM|PM)\b/ig,"")
-        .replace(/\b(by|at)\s*\d{1,2}\s*(?:AM|PM)?\b/ig,"")
-        .replace(/\.$/,"")
-        .replace(/\s+/g," ")
-        .trim()
+function cleanBulletinPlace(value){
+  return String(value || "")
+    .replace(/\b(around|near|including|mainly|about|between|after|before)\b/ig, "")
+    .replace(/\b\d{1,2}:\d{2}\s*(?:AM|PM)?\b/ig, "")
+    .replace(/\b\d{1,2}\s*(?:AM|PM)\b/ig, "")
+    .replace(/\b(by|at)\s*\d{1,2}\s*(?:AM|PM)?\b/ig, "")
+    .replace(/\.$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function areaLooksRelevantToPOI(area,location){
-    const a=area.toLowerCase(),p=`${location.name} ${location.area}`.toLowerCase();
-    if(p.includes("cabot")||p.includes("lonoke"))return a.includes("lonoke");
-    if(p.includes("sheridan")||p.includes("grant"))return a.includes("grant");
-    if(p.includes("benton")||p.includes("saline"))return a.includes("saline");
-    return a.includes("pulaski")
-}
+/* =========================
+   STORM MOTION / IMPACT TIME
+========================= */
 
 function parseStormMotion(p){
-    const params=p.parameters||{};
-    const paramText=Object.keys(params).map(k=>Array.isArray(params[k])?params[k].join(" "):String(params[k]||"")).join(" ");
-    const text=`${p.headline||""} ${p.description||""} ${p.instruction||""} ${paramText}`;
-    const m=text.match(/moving\s+([A-Z]{1,3}|north|south|east|west|northeast|northwest|southeast|southwest|north-northeast|east-northeast|east-southeast|south-southeast|south-southwest|west-southwest|west-northwest|north-northwest)\s+at\s+(\d+)\s*(mph|kt|kts|knots?)?/i);
-    if(!m)return null;
-    const dir=normalizeMotionDirection(m[1]);
-    let speed=Number(m[2]);
-    const unit=String(m[3]||"mph").toLowerCase();
-    if(unit.startsWith("kt")||unit.startsWith("knot"))speed=Math.round(speed*1.15078);
-    return{direction:dir,speed,originalSpeed:Number(m[2]),unit}
+  const params = p.parameters || {};
+  const paramText = Object.keys(params)
+    .map(key => Array.isArray(params[key]) ? params[key].join(" ") : String(params[key] || ""))
+    .join(" ");
+
+  const text = `${p.headline || ""} ${p.description || ""} ${p.instruction || ""} ${paramText}`;
+
+  const match = text.match(/moving\s+([A-Z]{1,3}|north|south|east|west|northeast|northwest|southeast|southwest|north-northeast|east-northeast|east-southeast|south-southeast|south-southwest|west-southwest|west-northwest|north-northwest)\s+at\s+(\d+)\s*(mph|kt|kts|knots?)?/i);
+
+  if(!match) return null;
+
+  const direction = normalizeMotionDirection(match[1]);
+  let speed = Number(match[2]);
+  const unit = String(match[3] || "mph").toLowerCase();
+
+  if(unit.startsWith("kt") || unit.startsWith("knot")){
+    speed = Math.round(speed * 1.15078);
+  }
+
+  return {
+    direction,
+    speed,
+    originalSpeed: Number(match[2]),
+    unit
+  };
 }
 
-function normalizeMotionDirection(v){
-    const c=String(v||"").toLowerCase().replace(/-/g," ").trim();
-    const w={
-        north:"N",south:"S",east:"E",west:"W",northeast:"NE",northwest:"NW",southeast:"SE",southwest:"SW","north northeast":"NNE","east northeast":"ENE","east southeast":"ESE","south southeast":"SSE","south southwest":"SSW","west southwest":"WSW","west northwest":"WNW","north northwest":"NNW"
-    };
+function normalizeMotionDirection(value){
+  const cleaned = String(value || "").toLowerCase().replace(/-/g, " ").trim();
 
-    return (w[c]||c.toUpperCase()).replace(/\s+/g,"")
+  const words = {
+    north: "N",
+    south: "S",
+    east: "E",
+    west: "W",
+    northeast: "NE",
+    northwest: "NW",
+    southeast: "SE",
+    southwest: "SW",
+    "north northeast": "NNE",
+    "east northeast": "ENE",
+    "east southeast": "ESE",
+    "south southeast": "SSE",
+    "south southwest": "SSW",
+    "west southwest": "WSW",
+    "west northwest": "WNW",
+    "north northwest": "NNW"
+  };
+
+  return (words[cleaned] || cleaned.toUpperCase()).replace(/\s+/g, "");
 }
 
-function parseStormOrigin(alert,p){
-    const text=`${p.description||""} ${p.instruction||""}`;
-    const m=text.match(/located\s+(?:near|over|around|approximately\s+near|\d+\s+miles?\s+(?:north|south|east|west|northeast|northwest|southeast|southwest)\s+of)\s+([A-Za-z .'-]+?)(?:,|\.| moving| at )/i);if(m){const name=cleanBulletinPlace(m[1]);const known=[...towns,...stations,...locations].find(x=>normalizeName(x.name)===normalizeName(name)||normalizeName(x.area)===normalizeName(name));if(known)return{lat:known.lat,lng:known.lng,label:known.name}}if(alert.geometry){try{const c=turf.centroid(alert).geometry.coordinates;return{lng:c[0],lat:c[1],label:"warning polygon center"}}catch(e){}}return null}
-function estimateImpactTime(alert,point,motion,origin){if(!motion||!motion.speed||!origin||point.lat===undefined||point.lng===undefined)return"Timing not available";try{const bearing=directionToBearing(motion.direction);if(bearing===null)return"Timing not available";const originPoint=turf.point([origin.lng,origin.lat]),target=turf.point([point.lng,point.lat]);const dist=turf.distance(originPoint,target,{units:"miles"});const bearingTo=turf.bearing(originPoint,target);let delta=Math.abs((((bearingTo-bearing)+540)%360)-180);if(delta>75)return"Near path, timing uncertain";const min=Math.round(dist/motion.speed*60);if(min<=0)return"Now";if(min>180)return"3+ hr";return`~${min} min / ${formatTime24(new Date(Date.now()+min*60000).toISOString())}`}catch(e){return"Timing not available"}}
-function applyZoneStatus(stationsHit,severity){const zones=new Set();stationsHit.forEach(s=>(s.zone||[]).forEach(z=>zones.add(z)));zones.forEach(z=>{const el=document.querySelector(`[data-zone="${z}"]`);if(el)setZoneSeverity(el,severity)})}
-function setZoneSeverity(el,severity){const rank={normal:0,"tstorm-watch":1,"tstorm-warning":2,"tornado-watch":3,"tornado-warning":4,"tornado-emergency":5};const cur=Array.from(el.classList).find(c=>rank[c]!==undefined)||"normal";if(rank[severity]>=rank[cur])el.className=`zone ${severity}`}
-function highlightImpactedStations(list){list.forEach(s=>{impactedStationNames.add(s.name);const el=document.getElementById(`marker-${slug(s.name)}`);if(el)el.classList.add("impacted")})} function resetStationMarkers(){impactedStationNames=new Set();document.querySelectorAll(".station-marker").forEach(el=>el.classList.remove("impacted"))} function resetZones(){document.querySelectorAll(".zone").forEach(z=>z.className="zone normal")}
-function openDetailById(id){const alert=latestPanelAlerts.find(a=>a.id===id);if(alert)openDetail(buildAlertDetail(alert))}
-function openDetail(detail){detailTitle.textContent=detail.title;detailMeta.innerHTML=`<strong>Expires:</strong> ${formatTime24(detail.expires)}<br><strong>Motion:</strong> ${detail.motion?`${detail.motion.direction} at ${detail.motion.speed} mph`:"Not available"}<br><strong>Areas:</strong> ${formatAreas(detail.areaDesc)}`;const stationsHtml=formatCondensedAlphabetizedList(detail.affectedStations,s=>`${s.name} <strong>(${s.impact})</strong>`,"No MEMS stations currently inside this alert area."),areasHtml=formatCondensedAlphabetizedList(detail.affectedTowns,t=>`${t.name} <strong>(${t.impact})</strong>`,"No impacted areas listed in the NWS bulletin."),locHtml=formatLocationsByType(detail.affectedPOI);detailBody.innerHTML=`<div class="detail-section"><strong>Affected Stations</strong><ul class="detail-list">${stationsHtml}</ul></div><div class="detail-section"><strong>Areas Impacted</strong><ul class="detail-list">${areasHtml}</ul></div><div class="detail-section"><strong>Locations</strong><ul class="detail-list">${locHtml}</ul></div><div class="detail-section"><strong>Instruction</strong><div>${detail.instruction||"No instruction included."}</div></div>`;detailOverlay.style.display="flex"}
-function openStationList(){detailTitle.textContent="MEMS Stations";detailMeta.innerHTML=`<strong>${stations.length}</strong> tracked stations / posts`;detailBody.innerHTML=`<div class="detail-section"><ul class="detail-list">${stations.map(s=>`<li><strong>${s.name}</strong> — ${s.area}${impactedStationNames.has(s.name)?" — <strong>IMPACTED</strong>":""}</li>`).join("")}</ul></div>`;detailOverlay.style.display="flex"} function closeDetail(){detailOverlay.style.display="none"}
-function formatCondensedAlphabetizedList(items,render,empty){return items.length?[...items].sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<li>${render(x)}</li>`).join(""):`<li>${empty}</li>`} function formatLocationsByType(list){if(!list.length)return"<li>No locations currently inside this alert area.</li>";const groups={};list.forEach(l=>{(groups[l.type||"Other"]??=[]).push(l)});return Object.keys(groups).sort().map(t=>`<li><strong>${t}:</strong> ${groups[t].sort((a,b)=>a.name.localeCompare(b.name)).map(l=>`${l.name} <strong>(${l.impact})</strong>`).join(", ")}</li>`).join("")}
-function buildTrackMinutes(){return[0,15,30,45,60].filter(m=>m===0||m<=TRACK_WINDOW_MINUTES)} function directionToBearing(d){return{N:0,NNE:22.5,NE:45,ENE:67.5,E:90,ESE:112.5,SE:135,SSE:157.5,S:180,SSW:202.5,SW:225,WSW:247.5,W:270,WNW:292.5,NW:315,NNW:337.5}[String(d||"").toUpperCase()]??null}
-function shouldDrawTrackForAlert(alert){const e=alert.properties?.event||"";return Boolean(alert.geometry)&&["Tornado Warning","Severe Thunderstorm Warning","Special Weather Statement","Marine Weather Statement"].includes(e)}
-function drawStormTrack(alert) {
-    const p = alert.properties || {};
-    const motion = parseStormMotion(p);
-    const origin = parseStormOrigin(alert, p);
-    if (!motion || !motion.speed || !origin) return;
+function parseStormOrigin(alert, p){
+  const text = `${p.description || ""} ${p.instruction || ""}`;
 
+  const match = text.match(/located\s+(?:near|over|around|approximately\s+near|\d+\s+miles?\s+(?:north|south|east|west|northeast|northwest|southeast|southwest)\s+of)\s+([A-Za-z .'-]+?)(?:,|\.| moving| at )/i);
+
+  if(match){
+    const name = cleanBulletinPlace(match[1]);
+
+    const known = [...towns, ...stations, ...locations].find(item => {
+      return normalizeName(item.name) === normalizeName(name) ||
+             normalizeName(item.area) === normalizeName(name);
+    });
+
+    if(known){
+      return {
+        lat: known.lat,
+        lng: known.lng,
+        label: known.name
+      };
+    }
+  }
+
+  if(alert.geometry){
+    try{
+      const center = turf.centroid(alert).geometry.coordinates;
+
+      return {
+        lng: center[0],
+        lat: center[1],
+        label: "warning polygon center"
+      };
+    }catch(err){}
+  }
+
+  return null;
+}
+
+function estimateImpactTime(alert, point, motion, origin){
+  if(!motion || !motion.speed || !origin || point.lat === undefined || point.lng === undefined){
+    return "Timing not available";
+  }
+
+  try{
     const bearing = directionToBearing(motion.direction);
-    if (bearing === null) return;
+    if(bearing === null) return "Timing not available";
 
-    const id = slug(alert.id || `${p.event}-${origin.label}-${p.sent || Date.now()}`);
     const originPoint = turf.point([origin.lng, origin.lat]);
-    const minutes = buildTrackMinutes();
-    const points = minutes.map(m => projectPointFromOrigin(originPoint, motion.speed, bearing, m));
-    const show = activeTrackId === id;
-    const group = L.layerGroup().addTo(stormTrackLayer);
+    const target = turf.point([point.lng, point.lat]);
+    const distance = turf.distance(originPoint, target, { units: "miles" });
+    const bearingToTarget = turf.bearing(originPoint, target);
 
-    // Shadow line
-    L.polyline(points, {color: "#050505", weight: 4, opacity: .85, interactive: false}).addTo(group);
+    const delta = Math.abs((((bearingToTarget - bearing) + 540) % 360) - 180);
 
-    // Main track line — click toggles labels
-    const line = L.polyline(points, {color: "#fff", weight: 1.5, opacity: .98, className: "storm-track-line"})
-        .bindPopup(`<strong>${formatTitle(p)}</strong><br><strong>Motion:</strong> ${motion.direction} at ${motion.speed} mph<br><strong>Origin:</strong> ${origin.label}<br><strong>Track timing:</strong> ${buildTrackTimingText(originPoint, motion.speed, bearing)}`)
-        .addTo(group);
+    if(delta > 75){
+      return "Near path, timing uncertain";
+    }
 
-    line.on("click", () => {
-        activeTrackId = activeTrackId === id ? null : id;
-        redrawStormTracks();
-        if (activeTrackId === id) line.openPopup();
-    });
+    const minutes = Math.round(distance / motion.speed * 60);
 
-    // Origin dot — click also toggles time labels
-    L.marker(points[0], {
-        icon: L.divIcon({className: "", html: `<div class="track-origin"></div>`, iconSize: [14, 14], iconAnchor: [7, 7]})
-    })
-    .bindPopup(`<strong>Storm location</strong><br>${origin.label}<br>${motion.direction} at ${motion.speed} mph`)
-    .addTo(group)
-    .on("click", () => {
-        activeTrackId = activeTrackId === id ? null : id;
-        redrawStormTracks();
-    });
+    if(minutes <= 0) return "Now";
+    if(minutes > 180) return "3+ hr";
 
-    // Time step barbs + labels
-    minutes.slice(1).forEach((m, i) => {
-        const eta = formatTime24(new Date(Date.now() + m * 60000).toISOString());
-        const pt = points[i + 1];
+    return `~${minutes} min / ${formatTime24(new Date(Date.now() + minutes * 60000).toISOString())}`;
 
-        // Barb marker
-        L.marker(pt, {
-            icon: L.divIcon({
-                className: "",
-                html: `<div class="track-step" style="transform:rotate(${bearing + 90}deg)"></div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            }),
-            interactive: false
-        }).addTo(group);
-
-        // Time label (shown/hidden based on activeTrackId)
-        L.marker(pt, {
-            icon: L.divIcon({
-                className: "",
-                html: `<div class="track-label ${show ? "visible" : ""}">${eta}</div>`,
-                iconSize: [42, 14],
-                iconAnchor: [21, -4]
-            }),
-            interactive: false
-        }).addTo(group);
-    });
+  }catch(err){
+    return "Timing not available";
+  }
 }
 
-function drawCustomStormTrack(track){if(!track||track.lat===undefined||track.lng===undefined)return;const motion={direction:normalizeMotionDirection(track.direction||"E"),speed:Number(track.speed||track.speedMph||25)},origin={lat:Number(track.lat),lng:Number(track.lng),label:track.name||"Unwarned Storm"};const fake={id:track.id||track.name||Math.random(),properties:{event:track.name||"Unwarned Storm",description:`moving ${motion.direction} at ${motion.speed} mph`},geometry:{type:"Point",coordinates:[origin.lng,origin.lat]}};drawStormTrack({...fake,properties:{...fake.properties,description:`located near ${origin.label}, moving ${motion.direction} at ${motion.speed} mph`}})}
-function projectPointFromOrigin(point,speed,bearing,minutes){const miles=speed*(minutes/60);const p=turf.destination(point,miles,bearing,{units:"miles"}).geometry.coordinates;return[p[1],p[0]]} function buildTrackTimingText(originPoint,speed,bearing){return buildTrackMinutes().slice(1).map(m=>`${m} min ${formatTime24(new Date(Date.now()+m*60000).toISOString())}`).join(" • ")}
-function updateStationSummary(){stationOnlineCount.textContent=stations.length;stationImpactedCount.textContent=impactedStationNames.size;poiCount.textContent=locations.length}
-function formatAreas(areaDesc){if(!areaDesc)return"None listed";const a=areaDesc.split(";").map(x=>x.trim()).filter(Boolean);return a.length<=8?a.join(", "):a.slice(0,8).join(", ")+`, +${a.length-8} more`} function formatTime24(v){if(!v)return"N/A";return new Date(v).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:false})} function sortAlerts(a,b){const r={"tornado-emergency":5,"tornado-warning":4,"tornado-watch":3,"tstorm-warning":2,"tstorm-watch":1,normal:0};return r[getSeverity(b.properties)]-r[getSeverity(a.properties)]} function slug(v){return String(v).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")} function cToF(c){return c==null?"--":Math.round(c*9/5+32)} function msToMph(ms){return ms==null?"--":Math.round(ms*2.23694)} function mmToIn(mm){return mm==null?"--":(mm/25.4).toFixed(2)} function safeRound(v){return v==null?"--":Math.round(v)} function degToCompass(deg){if(deg==null)return"--";const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];return dirs[Math.round(deg/22.5)%16]}
-function updateRefreshCountdown(){secondsUntilRefresh--;if(secondsUntilRefresh<=0){secondsUntilRefresh=REFRESH_SECONDS;loadAlerts();loadCustomStormTracks()}refreshCountdown.textContent=secondsUntilRefresh+"s"} function updateConditionCardClasses(gust,lightning,age){windCard.className="condition-card wind";lightningCard.className="condition-card lightning";updatedCard.className="condition-card updated";if(gust>=50)windCard.classList.add("warn");else if(gust>=35)windCard.classList.add("caution");if(lightning!==null&&lightning<=10)lightningCard.classList.add("lightning-near");else if(lightning!==null&&lightning<=20)lightningCard.classList.add("caution");if(age!==null&&age>180)updatedCard.classList.add("warn");else if(age!==null&&age>90)updatedCard.classList.add("caution")} function setTempestUnavailable(reason){tempValue.textContent="--°";humidityValue.textContent=reason;rainValue.textContent="--";rainRateValue.textContent="Rate --";windValue.textContent="--G--";windSubValue.textContent="Direction --";lightningValue.textContent="--";lightningSubValue.textContent="Unavailable";tempestUpdatedValue.textContent="--:--";tempestAgeValue.textContent="Tempest unavailable"}
+/* =========================
+   ZONES / STATIONS
+========================= */
+
+function applyZoneStatus(stationsHit, severity){
+  const zones = new Set();
+
+  stationsHit.forEach(station => {
+    (station.zone || []).forEach(zone => zones.add(zone));
+  });
+
+  zones.forEach(zoneName => {
+    const element = document.querySelector(`[data-zone="${zoneName}"]`);
+
+    if(element){
+      setZoneSeverity(element, severity);
+    }
+  });
+}
+
+function setZoneSeverity(element, severity){
+  const rank = {
+    normal: 0,
+    "tstorm-watch": 1,
+    "tstorm-warning": 2,
+    "tornado-watch": 3,
+    "tornado-warning": 4,
+    "tornado-emergency": 5
+  };
+
+  const current = Array.from(element.classList).find(className => rank[className] !== undefined) || "normal";
+
+  if(rank[severity] >= rank[current]){
+    element.className = `zone ${severity}`;
+  }
+}
+
+function highlightImpactedStations(list){
+  list.forEach(station => {
+    impactedStationNames.add(station.name);
+
+    const marker = document.getElementById(`marker-${slug(station.name)}`);
+    if(marker){
+      marker.classList.add("impacted");
+    }
+  });
+}
+
+function resetStationMarkers(){
+  impactedStationNames = new Set();
+  document.querySelectorAll(".station-marker").forEach(marker => {
+    marker.classList.remove("impacted");
+  });
+}
+
+function resetZones(){
+  document.querySelectorAll(".zone").forEach(zone => {
+    zone.className = "zone normal";
+  });
+}
+
+function openStationList(){
+  setText("detailTitle", "MEMS Stations");
+  setHTML("detailMeta", `<strong>${stations.length}</strong> tracked stations / posts`);
+
+  setHTML("detailBody", `
+    <div class="detail-section">
+      <ul class="detail-list">
+        ${stations.map(station => `
+          <li>
+            <strong>${station.name}</strong> — ${station.area || ""}
+            ${impactedStationNames.has(station.name) ? " — <strong>IMPACTED</strong>" : ""}
+          </li>
+        `).join("")}
+      </ul>
+    </div>
+  `);
+
+  const overlay = document.getElementById("detailOverlay");
+  if(overlay){
+    overlay.style.display = "flex";
+  }
+}
+
+window.openStationList = openStationList;
+
+/* =========================
+   STORM TRACKS
+========================= */
+
+function setTrackWindow(minutes){
+  TRACK_WINDOW_MINUTES = Number(minutes) || 60;
+
+  document.querySelectorAll("[data-track-minutes]").forEach(button => {
+    button.classList.toggle("active", Number(button.dataset.trackMinutes) === TRACK_WINDOW_MINUTES);
+  });
+
+  redrawStormTracks();
+}
+
+window.setTrackWindow = setTrackWindow;
+
+function redrawStormTracks(){
+  stormTrackLayer.clearLayers();
+
+  latestAllArkansasAlerts.forEach(alert => {
+    if(shouldDrawTrackForAlert(alert)){
+      drawStormTrack(alert);
+    }
+  });
+
+  latestCustomStormTracks.forEach(drawCustomStormTrack);
+}
+
+async function loadCustomStormTracks(){
+  try{
+    const res = await fetch("storm-tracks.json", {
+      cache: "no-store"
+    });
+
+    if(!res.ok){
+      latestCustomStormTracks = [];
+      redrawStormTracks();
+      return;
+    }
+
+    const data = await res.json();
+
+    latestCustomStormTracks = Array.isArray(data)
+      ? data
+      : (Array.isArray(data.tracks) ? data.tracks : []);
+
+    redrawStormTracks();
+
+  }catch(err){
+    latestCustomStormTracks = [];
+  }
+}
+
+function shouldDrawTrackForAlert(alert){
+  const event = alert.properties?.event || "";
+
+  return Boolean(alert.geometry) && [
+    "Tornado Warning",
+    "Severe Thunderstorm Warning",
+    "Special Weather Statement",
+    "Marine Weather Statement"
+  ].includes(event);
+}
+
+function drawStormTrack(alert){
+  const p = alert.properties || {};
+  const motion = parseStormMotion(p);
+  const origin = parseStormOrigin(alert, p);
+
+  if(!motion || !motion.speed || !origin) return;
+
+  const bearing = directionToBearing(motion.direction);
+  if(bearing === null) return;
+
+  const id = slug(alert.id || `${p.event}-${origin.label}-${p.sent || Date.now()}`);
+  const originPoint = turf.point([origin.lng, origin.lat]);
+  const minutes = buildTrackMinutes();
+  const points = minutes.map(minute => projectPointFromOrigin(originPoint, motion.speed, bearing, minute));
+  const showLabels = activeTrackId === id;
+  const group = L.layerGroup().addTo(stormTrackLayer);
+
+  L.polyline(points, {
+    color: "#050505",
+    weight: 4,
+    opacity: 0.85,
+    interactive: false
+  }).addTo(group);
+
+  const line = L.polyline(points, {
+    color: "#fff",
+    weight: 1.5,
+    opacity: 0.98,
+    className: "storm-track-line"
+  })
+  .bindPopup(`
+    <strong>${formatTitle(p)}</strong><br>
+    <strong>Motion:</strong> ${motion.direction} at ${motion.speed} mph<br>
+    <strong>Origin:</strong> ${origin.label}<br>
+    <strong>Track timing:</strong> ${buildTrackTimingText(originPoint, motion.speed, bearing)}
+  `)
+  .addTo(group);
+
+  line.on("click", () => {
+    activeTrackId = activeTrackId === id ? null : id;
+    redrawStormTracks();
+
+    if(activeTrackId === id){
+      line.openPopup();
+    }
+  });
+
+  L.marker(points[0], {
+    icon: L.divIcon({
+      className: "",
+      html: `<div class="track-origin"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    })
+  })
+  .bindPopup(`<strong>Storm location</strong><br>${origin.label}<br>${motion.direction} at ${motion.speed} mph`)
+  .addTo(group)
+  .on("click", () => {
+    activeTrackId = activeTrackId === id ? null : id;
+    redrawStormTracks();
+  });
+
+  minutes.slice(1).forEach((minute, index) => {
+    const eta = formatTime24(new Date(Date.now() + minute * 60000).toISOString());
+    const point = points[index + 1];
+
+    L.marker(point, {
+      icon: L.divIcon({
+        className: "",
+        html: `<div class="track-step" style="transform:rotate(${bearing + 90}deg)"></div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      }),
+      interactive: false
+    }).addTo(group);
+
+    L.marker(point, {
+      icon: L.divIcon({
+        className: "",
+        html: `<div class="track-label ${showLabels ? "visible" : ""}">${eta}</div>`,
+        iconSize: [42, 14],
+        iconAnchor: [21, -4]
+      }),
+      interactive: false
+    }).addTo(group);
+  });
+}
+
+function drawCustomStormTrack(track){
+  if(!track || track.lat === undefined || track.lng === undefined) return;
+
+  const motion = {
+    direction: normalizeMotionDirection(track.direction || "E"),
+    speed: Number(track.speed || track.speedMph || 25)
+  };
+
+  const origin = {
+    lat: Number(track.lat),
+    lng: Number(track.lng),
+    label: track.name || "Unwarned Storm"
+  };
+
+  const fakeAlert = {
+    id: track.id || track.name || Math.random(),
+    properties: {
+      event: track.name || "Unwarned Storm",
+      description: `located near ${origin.label}, moving ${motion.direction} at ${motion.speed} mph`
+    },
+    geometry: {
+      type: "Point",
+      coordinates: [origin.lng, origin.lat]
+    }
+  };
+
+  drawStormTrack(fakeAlert);
+}
+
+function buildTrackMinutes(){
+  return [0, 15, 30, 45, 60].filter(minute => minute === 0 || minute <= TRACK_WINDOW_MINUTES);
+}
+
+function directionToBearing(direction){
+  const bearings = {
+    N: 0,
+    NNE: 22.5,
+    NE: 45,
+    ENE: 67.5,
+    E: 90,
+    ESE: 112.5,
+    SE: 135,
+    SSE: 157.5,
+    S: 180,
+    SSW: 202.5,
+    SW: 225,
+    WSW: 247.5,
+    W: 270,
+    WNW: 292.5,
+    NW: 315,
+    NNW: 337.5
+  };
+
+  return bearings[String(direction || "").toUpperCase()] ?? null;
+}
+
+function projectPointFromOrigin(point, speed, bearing, minutes){
+  const miles = speed * (minutes / 60);
+  const projected = turf.destination(point, miles, bearing, { units: "miles" }).geometry.coordinates;
+
+  return [projected[1], projected[0]];
+}
+
+function buildTrackTimingText(originPoint, speed, bearing){
+  return buildTrackMinutes()
+    .slice(1)
+    .map(minute => `${minute} min ${formatTime24(new Date(Date.now() + minute * 60000).toISOString())}`)
+    .join(" • ");
+}
+
+/* =========================
+   FORMAT HELPERS
+========================= */
+
+function formatAffectedStations(list){
+  return list.length
+    ? list.map(station => `<span class="station-list-line">${station.name} — ${station.impact}</span>`).join("")
+    : `<span class="station-list-line">No MEMS stations currently inside this alert area.</span>`;
+}
+
+function formatCondensedAlphabetizedList(items, render, empty){
+  return items.length
+    ? [...items]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(item => `<li>${render(item)}</li>`)
+      .join("")
+    : `<li>${empty}</li>`;
+}
+
+function formatLocationsByType(list){
+  if(!list.length){
+    return "<li>No locations currently inside this alert area.</li>";
+  }
+
+  const groups = {};
+
+  list.forEach(location => {
+    const type = location.type || "Other";
+
+    if(!groups[type]){
+      groups[type] = [];
+    }
+
+    groups[type].push(location);
+  });
+
+  return Object.keys(groups)
+    .sort()
+    .map(type => {
+      const names = groups[type]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(location => `${location.name} <strong>(${location.impact})</strong>`)
+        .join(", ");
+
+      return `<li><strong>${type}:</strong> ${names}</li>`;
+    })
+    .join("");
+}
+
+function formatAreas(areaDesc){
+  if(!areaDesc) return "None listed";
+
+  const areas = areaDesc
+    .split(";")
+    .map(area => area.trim())
+    .filter(Boolean);
+
+  return areas.length <= 8
+    ? areas.join(", ")
+    : areas.slice(0, 8).join(", ") + `, +${areas.length - 8} more`;
+}
+
+function formatTime24(value){
+  if(!value) return "N/A";
+
+  return new Date(value).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+}
+
+function sortAlerts(a, b){
+  const rank = {
+    "tornado-emergency": 5,
+    "tornado-warning": 4,
+    "tornado-watch": 3,
+    "tstorm-warning": 2,
+    "tstorm-watch": 1,
+    normal: 0
+  };
+
+  return rank[getSeverity(b.properties)] - rank[getSeverity(a.properties)];
+}
+
+function slug(value){
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function normalizeName(value){
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function dedupeByName(items){
+  const seen = new Set();
+
+  return items.filter(item => {
+    const key = normalizeName(item.name);
+
+    if(!key || seen.has(key)){
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function cToF(c){
+  return c == null ? "--" : Math.round(c * 9 / 5 + 32);
+}
+
+function msToMph(ms){
+  return ms == null ? "--" : Math.round(ms * 2.23694);
+}
+
+function mmToIn(mm){
+  return mm == null ? "--" : (mm / 25.4).toFixed(2);
+}
+
+function safeRound(value){
+  return value == null ? "--" : Math.round(value);
+}
+
+function degToCompass(deg){
+  if(deg == null) return "--";
+
+  const directions = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+
+  return directions[Math.round(deg / 22.5) % 16];
+}
+
+function setText(id, value){
+  const el = document.getElementById(id);
+  if(el){
+    el.textContent = value;
+  }
+}
+
+function setHTML(id, value){
+  const el = document.getElementById(id);
+  if(el){
+    el.innerHTML = value;
+  }
+}
+
+/* =========================
+   REFRESH / SUMMARY
+========================= */
+
+function updateStationSummary(){
+  setText("stationOnlineCount", stations.length);
+  setText("stationImpactedCount", impactedStationNames.size);
+  setText("poiCount", locations.length);
+}
+
+function maintainMapViewAfterRefresh(){
+  if(Date.now() - lastUserMapActivity < USER_ACTIVITY_HOLD_MS){
+    return;
+  }
+
+  map.setView(AR_CENTER, AR_ZOOM, {
+    animate: false
+  });
+}
+
+function updateRefreshCountdown(){
+  secondsUntilRefresh--;
+
+  if(secondsUntilRefresh <= 0){
+    secondsUntilRefresh = REFRESH_SECONDS;
+    loadAlerts();
+    loadCustomStormTracks();
+  }
+
+  setText("refreshCountdown", secondsUntilRefresh + "s");
+}
+
+/* =========================
+   STARTUP
+========================= */
+
 updateStationSummary();
 loadServiceArea();
-loadlzkArea();
+loadLzkArea();
 loadAlerts();
 loadTempestConditions();
 loadOutlookData();
@@ -744,7 +1753,8 @@ setInterval(updateRefreshCountdown, 1000);
 setInterval(loadTempestConditions, 60000);
 setInterval(loadCustomStormTracks, 60000);
 
-// Force Leaflet to recalculate container size after CSS grid has settled
-window.addEventListener("load", function(){
-    setTimeout(function(){ map.invalidateSize(); }, 150);
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 150);
 });
