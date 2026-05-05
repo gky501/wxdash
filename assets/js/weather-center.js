@@ -1878,3 +1878,339 @@ window.addEventListener("load", () => {
     map.invalidateSize();
   }, 150);
 });
+
+/* =========================================================
+   OUTLOOK FIX OVERRIDE
+   Paste this at the VERY BOTTOM of weather-center.js
+   This fixes:
+   - 0% area showing a tornado/hail/wind note
+   - CIG wording being confusing
+   - CIG notes showing when the station is not actually inside the outlook
+========================================================= */
+
+function getStormOutlook(point){
+  const tornadoProb = getProbInfo(point, outlookData.tornadoProb, "tornado");
+  const hailProb = getProbInfo(point, outlookData.hailProb, "hail");
+  const windProb = getProbInfo(point, outlookData.windProb, "wind");
+
+  return {
+    tornado: {
+      prob: tornadoProb.label,
+      note: tornadoProb.rank > 0
+        ? getCigLabel(point, outlookData.tornadoCig, "tornado")
+        : "Not in a tornado outlook area"
+    },
+
+    hail: {
+      prob: hailProb.label,
+      note: hailProb.rank > 0
+        ? getCigLabel(point, outlookData.hailCig, "hail")
+        : "Not in a hail outlook area"
+    },
+
+    wind: {
+      prob: windProb.label,
+      note: windProb.rank > 0
+        ? getCigLabel(point, outlookData.windCig, "wind")
+        : "Not in a damaging wind outlook area"
+    },
+
+    excessiveRain: getRainLabel(point, outlookData.excessiveRain)
+  };
+}
+
+function getProbInfo(point, geojson, type){
+  if(!geojson || !geojson.features){
+    return {
+      rank: 0,
+      label: "Not loaded"
+    };
+  }
+
+  let best = {
+    rank: 0,
+    label: "Not highlighted"
+  };
+
+  geojson.features.forEach(feature => {
+    if(!feature.geometry) return;
+
+    try{
+      if(turf.booleanPointInPolygon(point, feature)){
+        const parsed = readProbabilityProperties(feature.properties || {}, type);
+
+        if(parsed.rank >= best.rank){
+          best = parsed;
+        }
+      }
+    }catch(err){}
+  });
+
+  return best;
+}
+
+function getProbLabel(point, geojson, type){
+  return getProbInfo(point, geojson, type).label;
+}
+
+function getCigLabel(point, geojson, type){
+  if(!geojson || !geojson.features){
+    return "Not loaded";
+  }
+
+  let best = {
+    rank: 0,
+    label: "No added note"
+  };
+
+  geojson.features.forEach(feature => {
+    if(!feature.geometry) return;
+
+    try{
+      if(turf.booleanPointInPolygon(point, feature)){
+        const parsed = readCigProperties(feature.properties || {}, type);
+
+        if(parsed.rank >= best.rank){
+          best = parsed;
+        }
+      }
+    }catch(err){}
+  });
+
+  return best.label;
+}
+
+function readProbabilityProperties(props, type){
+  const raw = readRawOutlookValue(props);
+  const upper = raw.toUpperCase();
+
+  const numberMatch = upper.match(/(\d+)\s*%?/);
+  const number = numberMatch ? Number(numberMatch[1]) : null;
+
+  if(number !== null){
+    return {
+      rank: number,
+      label: `${number}% area`
+    };
+  }
+
+  if(upper.includes("HIGH")){
+    return {
+      rank: 60,
+      label: "High risk area"
+    };
+  }
+
+  if(upper.includes("MODERATE") || upper.includes("MDT")){
+    return {
+      rank: 45,
+      label: "Moderate risk area"
+    };
+  }
+
+  if(upper.includes("ENHANCED") || upper.includes("ENH")){
+    return {
+      rank: 30,
+      label: "Enhanced risk area"
+    };
+  }
+
+  if(upper.includes("SLIGHT") || upper.includes("SLGT")){
+    return {
+      rank: 15,
+      label: "Slight risk area"
+    };
+  }
+
+  if(upper.includes("MARGINAL") || upper.includes("MRGL")){
+    return {
+      rank: 5,
+      label: "Marginal risk area"
+    };
+  }
+
+  return {
+    rank: 0,
+    label: raw || "Not highlighted"
+  };
+}
+
+function readCigProperties(props, type){
+  const raw = readRawOutlookValue(props);
+  const upper = raw.toUpperCase();
+  const cig = extractCigLevel(upper);
+
+  if(type === "tornado"){
+    if(cig === 3){
+      return {
+        rank: 3,
+        label: "Strongest tornado potential shown for this outlook"
+      };
+    }
+
+    if(cig === 2){
+      return {
+        rank: 2,
+        label: "Stronger tornadoes are possible if storms develop"
+      };
+    }
+
+    if(cig === 1){
+      return {
+        rank: 1,
+        label: "A stronger tornado is possible if storms develop"
+      };
+    }
+
+    return {
+      rank: 0,
+      label: "No added tornado note"
+    };
+  }
+
+  if(type === "hail"){
+    if(cig === 2){
+      return {
+        rank: 2,
+        label: "Very large hail is possible if storms develop"
+      };
+    }
+
+    if(cig === 1){
+      return {
+        rank: 1,
+        label: "Large hail is possible if storms develop"
+      };
+    }
+
+    return {
+      rank: 0,
+      label: "No added hail note"
+    };
+  }
+
+  if(type === "wind"){
+    if(cig === 3){
+      return {
+        rank: 3,
+        label: "Highest damaging wind potential shown for this outlook"
+      };
+    }
+
+    if(cig === 2){
+      return {
+        rank: 2,
+        label: "Organized damaging winds are possible if storms develop"
+      };
+    }
+
+    if(cig === 1){
+      return {
+        rank: 1,
+        label: "Damaging winds are possible if storms develop"
+      };
+    }
+
+    return {
+      rank: 0,
+      label: "No added wind note"
+    };
+  }
+
+  return {
+    rank: 0,
+    label: "No added note"
+  };
+}
+
+function readRawOutlookValue(props){
+  const possibleKeys = [
+    "LABEL",
+    "label",
+    "RISK",
+    "risk",
+    "CATEGORY",
+    "category",
+    "DN",
+    "dn",
+    "THRESHOLD",
+    "threshold",
+    "OUTLOOK",
+    "outlook",
+    "name",
+    "Name",
+    "CIG",
+    "cig",
+    "LEVEL",
+    "level",
+    "VALUE",
+    "value"
+  ];
+
+  for(const key of possibleKeys){
+    if(
+      props[key] !== undefined &&
+      props[key] !== null &&
+      String(props[key]).trim() !== ""
+    ){
+      return String(props[key]).trim();
+    }
+  }
+
+  return "";
+}
+
+function extractCigLevel(text){
+  const value = String(text || "").trim().toUpperCase();
+
+  const cigMatch = value.match(/CIG\s*([123])/i);
+  if(cigMatch){
+    return Number(cigMatch[1]);
+  }
+
+  const levelMatch = value.match(/LEVEL\s*([123])/i);
+  if(levelMatch){
+    return Number(levelMatch[1]);
+  }
+
+  if(value === "1" || value === "2" || value === "3"){
+    return Number(value);
+  }
+
+  return 0;
+}
+
+function getRainLabel(point, geojson){
+  if(!geojson || !geojson.features){
+    return "Not loaded";
+  }
+
+  let best = {
+    rank: 0,
+    label: "Not highlighted"
+  };
+
+  geojson.features.forEach(feature => {
+    if(!feature.geometry) return;
+
+    try{
+      if(turf.booleanPointInPolygon(point, feature)){
+        const raw = readRawOutlookValue(feature.properties || {});
+        const upper = raw.toUpperCase();
+
+        const parsed =
+          upper.includes("HIGH") ? { rank: 4, label: "High flooding concern" } :
+          upper.includes("MODERATE") ? { rank: 3, label: "Moderate flooding concern" } :
+          upper.includes("SLIGHT") ? { rank: 2, label: "Elevated flooding concern" } :
+          upper.includes("MARGINAL") ? { rank: 1, label: "Limited flooding concern" } :
+          { rank: 1, label: raw || "Included in rain outlook" };
+
+        if(parsed.rank >= best.rank){
+          best = parsed;
+        }
+      }
+    }catch(err){}
+  });
+
+  return best.label;
+}
