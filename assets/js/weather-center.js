@@ -274,26 +274,26 @@ async function loadServiceArea() {
 }
 
 async function loadOutlookData(){
-    const endpoints={
-        tornado:"https://www.spc.noaa.gov/products/outlook/day1probotlk_torn.lyr.geojson",hail:"https://www.spc.noaa.gov/products/outlook/day1probotlk_hail.lyr.geojson",wind:"https://www.spc.noaa.gov/products/outlook/day1probotlk_wind.lyr.geojson",excessiveRain:"https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
-    };
+  const base = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer";
 
-    for(const k in endpoints){
-        try{
-            const r=await fetch(endpoints[k]);
-            if(!r.ok)throw new Error(k+" failed");
-            outlookData[k]=await r.json()
-        }
+  const endpoints = {
+    tornado: `${base}/4/query?where=1%3D1&outFields=*&f=geojson`,
+    hail: `${base}/6/query?where=1%3D1&outFields=*&f=geojson`,
+    wind: `${base}/5/query?where=1%3D1&outFields=*&f=geojson`,
+    excessiveRain: "https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer/0/query?where=1%3D1&outFields=*&f=geojson"
+  };
 
-        catch(e){
-            console.warn("Outlook load failed",k,e);
-            outlookData[k]=null
-        }
-
+  for(const key in endpoints){
+    try{
+      const res = await fetch(endpoints[key]);
+      if(!res.ok) throw new Error(`${key} failed: ${res.status}`);
+      outlookData[key] = await res.json();
+    }catch(err){
+      console.warn("Outlook load failed:", key, err);
+      outlookData[key] = null;
     }
-
+  }
 }
-
 function setTrackWindow(minutes){
     TRACK_WINDOW_MINUTES=Number(minutes)||60;
     document.querySelectorAll("[data-track-minutes]").forEach(b=>b.classList.toggle("active",Number(b.dataset.trackMinutes)===TRACK_WINDOW_MINUTES));
