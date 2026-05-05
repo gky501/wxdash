@@ -424,19 +424,20 @@ function buildStationRadarMap(profile,zoneStations){
     }).bindPopup(`<strong>${s.name}</strong>`).addTo(mini))
 }
 
-function getOutlookLabel(point,geojson){
-    if(!geojson||!geojson.features)return"Not loaded";
-    let best="None";
-    geojson.features.forEach(f=>{
+function getOutlookLabel(point, geojson, type){
+    if(!geojson || !geojson.features) return "Not loaded";
+
+    let best = "LOW";
+
+    geojson.features.forEach(f => {
         try{
-            if(f.geometry&&turf.booleanPointInPolygon(point,f))best=readOutlookProperties(f.properties)
-        }
-
-        catch(e){
-        }
-
+            if(f.geometry && turf.booleanPointInPolygon(point, f)){
+                best = readOutlookProperties(f.properties, type);
+            }
+        } catch(e){}
     });
-    return best
+
+    return best;
 }
 
 function readOutlookProperties(p){
