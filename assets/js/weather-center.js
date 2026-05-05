@@ -462,139 +462,43 @@ function readOutlookProperties(props, type){
 
   const text = String(raw).trim();
   const upper = text.toUpperCase();
-
   const cig = extractCigLevel(upper);
 
   if(type === "tornado"){
-    if(cig === 3){
-      return {
-        rank: 3,
-        label: "High-end tornado intensity signal"
-      };
-    }
-
-    if(cig === 2){
-      return {
-        rank: 2,
-        label: "Stronger tornado intensity signal"
-      };
-    }
-
-    if(cig === 1){
-      return {
-        rank: 1,
-        label: "Elevated tornado intensity signal"
-      };
-    }
-
-    if(upper.includes("SIG")){
-      return {
-        rank: 1,
-        label: "Elevated tornado intensity signal"
-      };
-    }
-
-    return riskCategoryFallback(upper);
+    if(cig === 3) return "Level 3: Highest tornado intensity signal";
+    if(cig === 2) return "Level 2: Strong tornado potential is higher";
+    if(cig === 1) return "Level 1: A stronger tornado is possible";
+    if(upper.includes("SIG")) return "Level 1: A stronger tornado is possible";
+    return "No added intensity signal";
   }
 
   if(type === "hail"){
-    if(cig === 2){
-      return {
-        rank: 2,
-        label: "Destructive hail signal"
-      };
-    }
-
-    if(cig === 1){
-      return {
-        rank: 1,
-        label: "Significant hail signal"
-      };
-    }
-
-    if(upper.includes("SIG")){
-      return {
-        rank: 1,
-        label: "Significant hail signal"
-      };
-    }
-
-    return riskCategoryFallback(upper);
+    if(cig === 2) return "Level 2: Very large, damaging hail is possible";
+    if(cig === 1) return "Level 1: Large hail is possible";
+    if(upper.includes("SIG")) return "Level 1: Large hail is possible";
+    return "No added intensity signal";
   }
 
   if(type === "wind"){
-    if(cig === 3){
-      return {
-        rank: 3,
-        label: "High-end damaging wind signal"
-      };
-    }
-
-    if(cig === 2){
-      return {
-        rank: 2,
-        label: "Organized damaging wind signal"
-      };
-    }
-
-    if(cig === 1){
-      return {
-        rank: 1,
-        label: "Damaging wind signal"
-      };
-    }
-
-    if(upper.includes("SIG")){
-      return {
-        rank: 1,
-        label: "Damaging wind signal"
-      };
-    }
-
-    return riskCategoryFallback(upper);
+    if(cig === 3) return "Level 3: Highest wind damage signal";
+    if(cig === 2) return "Level 2: More organized damaging wind is possible";
+    if(cig === 1) return "Level 1: Damaging wind is possible";
+    if(upper.includes("SIG")) return "Level 1: Damaging wind is possible";
+    return "No added intensity signal";
   }
 
   if(type === "excessiveRain"){
     const lower = upper.toLowerCase();
 
-    if(lower.includes("high")){
-      return {
-        rank: 4,
-        label: "High flooding signal"
-      };
-    }
+    if(lower.includes("high")) return "High flooding concern";
+    if(lower.includes("moderate")) return "Moderate flooding concern";
+    if(lower.includes("slight")) return "Elevated flooding concern";
+    if(lower.includes("marginal")) return "Limited flooding concern";
 
-    if(lower.includes("moderate")){
-      return {
-        rank: 3,
-        label: "Moderate flooding signal"
-      };
-    }
-
-    if(lower.includes("slight")){
-      return {
-        rank: 2,
-        label: "Elevated flooding signal"
-      };
-    }
-
-    if(lower.includes("marginal")){
-      return {
-        rank: 1,
-        label: "Limited flooding signal"
-      };
-    }
-
-    return {
-      rank: 0,
-      label: "No higher-end signal"
-    };
+    return "No added flooding signal";
   }
 
-  return {
-    rank: 0,
-    label: "No higher-end signal"
-  };
+  return "No added intensity signal";
 }
 
 function extractCigLevel(text){
@@ -609,50 +513,6 @@ function extractCigLevel(text){
   }
 
   return 0;
-}
-
-function riskCategoryFallback(text){
-  const upper = String(text || "").toUpperCase();
-
-  if(upper.includes("HIGH")){
-    return {
-      rank: 4,
-      label: "High severe weather signal"
-    };
-  }
-
-  if(upper.includes("MODERATE")){
-    return {
-      rank: 3,
-      label: "Moderate severe weather signal"
-    };
-  }
-
-  if(upper.includes("ENHANCED")){
-    return {
-      rank: 2,
-      label: "Elevated severe weather signal"
-    };
-  }
-
-  if(upper.includes("SLIGHT")){
-    return {
-      rank: 1,
-      label: "Low-end severe weather signal"
-    };
-  }
-
-  if(upper.includes("MARGINAL")){
-    return {
-      rank: 1,
-      label: "Marginal severe weather signal"
-    };
-  }
-
-  return {
-    rank: 0,
-    label: "No higher-end signal"
-  };
 }
 
 /* =========================
