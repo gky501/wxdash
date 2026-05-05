@@ -387,7 +387,10 @@ function openZoneDetail(zoneId){
     });
     detailTitle.textContent=profile.title;
     detailMeta.innerHTML=`<strong>Station Radar View</strong><br>Local station group view centered on ${profile.title}`;
-    detailBody.innerHTML=`<div class="detail-section"><strong>Station Radar View</strong><div id="stationRadarMap" style="height:280px;margin-top:10px;border-radius:10px;overflow:hidden;"></div></div><div class="detail-section"><strong>Outlook Data</strong><ul class="detail-list"><li>Tornado — <strong>${getOutlookLabel(zonePoint,outlookData.tornado)}</strong></li><li>Hail — <strong>${getOutlookLabel(zonePoint,outlookData.hail)}</strong></li><li>Wind — <strong>${getOutlookLabel(zonePoint,outlookData.wind)}</strong></li><li>Excessive Rain — <strong>${getOutlookLabel(zonePoint,outlookData.excessiveRain)}</strong></li></ul></div><div class="detail-section"><strong>Stations</strong><ul class="detail-list">${zoneStations.map(s=>`<li>${
+    detailBody.innerHTML=`<div class="detail-section"><strong>Station Radar View</strong><div id="stationRadarMap" style="height:280px;margin-top:10px;border-radius:10px;overflow:hidden;"></div></div><div class="detail-section"><strong>Outlook Data</strong><ul class="detail-list"><li>Tornado — <strong>${getOutlookLabel(zonePoint, outlookData.tornado, "tornado")}</strong></li>
+<li>Hail — <strong>${getOutlookLabel(zonePoint, outlookData.hail, "hail")}</strong></li>
+<li>Wind — <strong>${getOutlookLabel(zonePoint, outlookData.wind, "wind")}</strong></li>
+<li>Excessive Rain — <strong>${getOutlookLabel(zonePoint, outlookData.excessiveRain, "excessiveRain")}</strong></li>${
         s.name
     }
 
